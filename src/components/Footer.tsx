@@ -14,9 +14,6 @@ export function Footer({
           <p className="mt-1 text-sm text-cream-dark">
             {SITE_STREET}, {SITE_PLACE}
           </p>
-          <p className="mt-1 text-sm text-cream-dark">
-            Jack Blackwell and David Blackwell
-          </p>
         </div>
         <nav aria-label="Footer" className="flex flex-col gap-2 text-sm">
           <Link href="/garages" className="hover:underline">
