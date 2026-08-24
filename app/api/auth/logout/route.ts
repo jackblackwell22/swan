@@ -1,7 +1,20 @@
 import { NextResponse } from "next/server";
-import { clearAuthCookies } from "@/lib/auth";
+import { SESSION_COOKIE, sessionCookieOptions } from "@/lib/auth";
 
 export async function POST() {
-  await clearAuthCookies();
-  return NextResponse.json({ ok: true });
+  const options = await sessionCookieOptions();
+  const response = new NextResponse(null, {
+    status: 303,
+    headers: { Location: "/admin/login" },
+  });
+  response.cookies.set({
+    name: SESSION_COOKIE,
+    value: "",
+    httpOnly: options.httpOnly,
+    secure: options.secure,
+    sameSite: options.sameSite,
+    path: "/",
+    maxAge: 0,
+  });
+  return response;
 }

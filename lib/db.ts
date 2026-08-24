@@ -199,35 +199,33 @@ function adminFingerprint(): string {
 function syncAdmins(db: Database.Database) {
   const seeds = getAdminSeeds();
   const fingerprint = adminFingerprint();
-  if (globalForDb.swanAdminFingerprint === fingerprint) return;
   const now = new Date().toISOString();
   const seedEmails = seeds.map((seed) => seed.email.toLowerCase());
-  for (const seed of seeds) {
-    const hash = bcrypt.hashSync(seed.password, 12);
-    const totpSecret = seed.totpSecret || null;
-    const totpEnabled = seed.totpSecret ? 1 : 0;
-    const existing = db
-      .prepare("SELECT * FROM admins WHERE email = ?")
-      .get(seed.email) as Admin | undefined;
-    if (!existing) {
-      db.prepare(
-        `INSERT INTO admins (email, password_hash, totp_secret, totp_enabled, created_at)
-         VALUES (?, ?, ?, ?, ?)`,
-      ).run(seed.email, hash, totpSecret, totpEnabled, now);
-      continue;
+  if (globalForDb.swanAdminFingerprint !== fingerprint) {
+    for (const seed of seeds) {
+      const hash = bcrypt.hashSync(seed.password, 12);
+      const existing = db
+        .prepare("SELECT * FROM admins WHERE email = ?")
+        .get(seed.email) as Admin | undefined;
+      if (!existing) {
+        db.prepare(
+          `INSERT INTO admins (email, password_hash, totp_secret, totp_enabled, created_at)
+           VALUES (?, ?, NULL, 0, ?)`,
+        ).run(seed.email, hash, now);
+      } else {
+        db.prepare(`UPDATE admins SET password_hash = ? WHERE id = ?`).run(hash, existing.id);
+      }
     }
-    db.prepare(
-      `UPDATE admins SET password_hash = ?, totp_secret = ?, totp_enabled = ? WHERE id = ?`,
-    ).run(hash, totpSecret, totpEnabled, existing.id);
+    if (seedEmails.length > 0) {
+      const placeholders = seedEmails.map(() => "?").join(", ");
+      db.prepare(`DELETE FROM admins WHERE lower(email) NOT IN (${placeholders})`).run(
+        ...seedEmails,
+      );
+    }
+    globalForDb.swanAdminFingerprint = fingerprint;
   }
-  if (seedEmails.length > 0) {
-    const placeholders = seedEmails.map(() => "?").join(", ");
-    db.prepare(`DELETE FROM admins WHERE lower(email) NOT IN (${placeholders})`).run(
-      ...seedEmails,
-    );
-  }
+  db.prepare("UPDATE admins SET totp_enabled = 0, totp_secret = NULL").run();
   db.prepare("DELETE FROM login_attempts").run();
-  globalForDb.swanAdminFingerprint = fingerprint;
 }
 
 function seedSampleTenants(db: Database.Database) {

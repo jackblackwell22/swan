@@ -1,21 +1,12 @@
-"use client";
-
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export function LogoutButton() {
-  const router = useRouter();
   return (
-    <Button
-      type="button"
-      variant="ghost"
-      onClick={async () => {
-        await fetch("/api/auth/logout", { method: "POST" });
-        router.push("/admin/login");
-        router.refresh();
-      }}
-    >
-      Sign out
-    </Button>
+    <form method="POST" action="/api/auth/logout">
+      <button type="submit" className={cn(buttonVariants({ variant: "ghost" }))}>
+        Sign out
+      </button>
+    </form>
   );
 }
