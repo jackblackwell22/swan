@@ -4,7 +4,7 @@
   "private": true,
   "description": "Family-run lock-up garages on Swan Street, Royal Leamington Spa.",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
     "dev": "next dev --port 3000",
