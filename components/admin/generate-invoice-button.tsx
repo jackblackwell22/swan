@@ -21,19 +21,17 @@ export function GenerateInvoiceButton({ tenantId }: { tenantId: number }) {
               setNote(result.error);
               return;
             }
-            setNote(
-              result.created
-                ? `Created ${result.invoiceNumber}`
-                : `${result.invoiceNumber} already exists for this month`,
-            );
-            if (result.invoiceId) router.push(`/admin/invoices/${result.invoiceId}`);
+            setNote(result.summary || result.invoiceNumber || "Done.");
+            if (result.count === 1 && result.invoiceId) {
+              router.push(`/admin/invoices/${result.invoiceId}`);
+            }
             router.refresh();
           })
         }
       >
         Invoice this month
       </Button>
-      {note ? <p className="mt-1 text-xs text-muted-foreground">{note}</p> : null}
+      {note ? <p className="mt-1 max-w-sm text-xs text-muted-foreground">{note}</p> : null}
     </div>
   );
 }

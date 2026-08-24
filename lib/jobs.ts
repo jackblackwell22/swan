@@ -1,3 +1,4 @@
+import { canEmailAsLandlord, isLandlordId, isSmtpHostConfigured } from "@/lib/config";
 import {
   getInvoice,
   invoicesNeedingReminder,
@@ -7,7 +8,7 @@ import {
   recordJobRun,
   refreshOverdueStatuses,
 } from "@/lib/db";
-import { isSmtpConfigured, sendInvoiceEmail } from "@/lib/email";
+import { sendInvoiceEmail } from "@/lib/email";
 import { londonDateISO } from "@/lib/format";
 import { generateMonthlyInvoices, regeneratePdf } from "@/lib/invoicing";
 
@@ -22,19 +23,19 @@ export async function runMonthlyInvoiceJob() {
       invoice.period_start === result.periodStart &&
       result.created.includes(invoice.invoice_number),
   );
-  if (isSmtpConfigured()) {
-    for (const invoice of invoices) {
-      const pdfPath = invoice.pdf_path || (await regeneratePdf(invoice.id));
-      const send = await sendInvoiceEmail(invoice, pdfPath, "invoice");
-      if (send.sent) {
-        markInvoiceSent(invoice.id);
-        emailed += 1;
-      } else {
-        emailSkipped += 1;
-      }
+  for (const invoice of invoices) {
+    if (!isLandlordId(invoice.landlord_id) || !canEmailAsLandlord(invoice.landlord_id)) {
+      emailSkipped += 1;
+      continue;
     }
-  } else {
-    emailSkipped = invoices.length;
+    const pdfPath = invoice.pdf_path || (await regeneratePdf(invoice.id));
+    const send = await sendInvoiceEmail(invoice, pdfPath, "invoice");
+    if (send.sent) {
+      markInvoiceSent(invoice.id);
+      emailed += 1;
+    } else {
+      emailSkipped += 1;
+    }
   }
   recordJobRun(
     "monthly-invoices-email",
@@ -42,13 +43,18 @@ export async function runMonthlyInvoiceJob() {
     "ok",
     `emailed ${emailed}, not emailed ${emailSkipped}`,
   );
-  return { ...result, emailed, emailSkipped, smtp: isSmtpConfigured() };
+  return {
+    ...result,
+    emailed,
+    emailSkipped,
+    smtp: isSmtpHostConfigured(),
+  };
 }
 
 export async function runReminderJob() {
   const today = londonDateISO();
   refreshOverdueStatuses(today);
-  if (!isSmtpConfigured()) {
+  if (!isSmtpHostConfigured()) {
     recordJobRun("reminders", today, "skipped", "Email is not set up yet.");
     return { sent7: 0, sent14: 0, skipped: true as const };
   }
@@ -59,6 +65,9 @@ export async function runReminderJob() {
     for (const invoice of invoices) {
       const fresh = getInvoice(invoice.id);
       if (!fresh || fresh.status === "paid") continue;
+      if (!isLandlordId(fresh.landlord_id) || !canEmailAsLandlord(fresh.landlord_id)) {
+        continue;
+      }
       const pdfPath = fresh.pdf_path || (await regeneratePdf(fresh.id));
       const send = await sendInvoiceEmail(fresh, pdfPath, "reminder");
       if (send.sent) {

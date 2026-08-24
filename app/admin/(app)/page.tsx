@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { listEnquiries, listInvoices, monthStats, unpaidInvoices } from "@/lib/db";
+import { listEnquiries, listGarages, listInvoices, monthStats, unpaidInvoices } from "@/lib/db";
 import { formatGBP, formatUKDate, londonDateISO, periodLabel } from "@/lib/format";
 import { currentPeriodStart } from "@/lib/invoicing";
 import { RunJobsButtons } from "@/components/admin/run-jobs-buttons";
@@ -25,6 +25,7 @@ export default function AdminHomePage() {
   const recentEnquiries = listEnquiries().slice(0, 5);
   const overdue = listInvoices().filter((invoice) => invoice.status === "overdue");
   const today = londonDateISO();
+  const unownedGarages = listGarages().filter((garage) => !garage.landlord_id);
 
   return (
     <div className="space-y-8">
@@ -37,6 +38,19 @@ export default function AdminHomePage() {
         </div>
         <RunJobsButtons />
       </div>
+
+      {unownedGarages.length > 0 ? (
+        <p className="rounded-lg bg-white p-4 text-sm text-muted-foreground ring-1 ring-border">
+          Garage{unownedGarages.length === 1 ? "" : "s"}{" "}
+          {unownedGarages.map((garage) => garage.number).join(", ")}{" "}
+          {unownedGarages.length === 1 ? "has" : "have"} no landlord yet. Set Jack or
+          David on{" "}
+          <Link href="/admin/garages" className="text-door underline-offset-2 hover:underline">
+            Garages
+          </Link>{" "}
+          before invoicing those units. The desk will not guess.
+        </p>
+      ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
@@ -91,6 +105,7 @@ export default function AdminHomePage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Invoice</TableHead>
+                  <TableHead>Landlord</TableHead>
                   <TableHead>Tenant</TableHead>
                   <TableHead>Reference</TableHead>
                   <TableHead>Due</TableHead>
@@ -111,6 +126,7 @@ export default function AdminHomePage() {
                         </Badge>
                       ) : null}
                     </TableCell>
+                    <TableCell>{invoice.landlord_name || "—"}</TableCell>
                     <TableCell>{invoice.tenant_name}</TableCell>
                     <TableCell className="font-mono text-xs">{invoice.payment_reference}</TableCell>
                     <TableCell>{formatUKDate(invoice.due_date)}</TableCell>

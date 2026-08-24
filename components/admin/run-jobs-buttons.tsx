@@ -17,8 +17,12 @@ export function RunJobsButtons() {
         onClick={() =>
           start(async () => {
             const result = await runMonthlyAction();
+            const extra =
+              result.errors && result.errors.length
+                ? ` Not invoiced: ${result.errors.join(" ")}`
+                : "";
             setNote(
-              `Invoices: ${result.created.length} new, ${result.skipped.length} already there. Email ${result.smtp ? `sent for ${result.emailed}` : "not set up yet"}.`,
+              `Invoices: ${result.created.length} new, ${result.skipped.length} already there. Email ${result.smtp ? `sent for ${result.emailed}` : "not set up yet"}.${extra}`,
             );
             router.refresh();
           })

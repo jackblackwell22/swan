@@ -86,10 +86,15 @@ export function unitKey(unitLabel: string): string {
   return unitLabel.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
 }
 
-export function paymentReference(unitLabel: string, periodStartISO: string): string {
+export function paymentReference(
+  landlordCode: "J" | "D",
+  garageNumbers: number[],
+  periodStartISO: string,
+): string {
   const { year, month } = parseISODate(periodStartISO);
   const yy = String(year).slice(-2);
-  return `SWAN-${unitKey(unitLabel)}-${monthAbbrev(month)}${yy}`;
+  const garages = [...garageNumbers].sort((a, b) => a - b).join("-");
+  return `SWAN-${landlordCode}-${garages}-${monthAbbrev(month)}${yy}`;
 }
 
 export function periodLabel(periodStartISO: string): string {

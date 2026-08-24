@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getBusinessConfig, hasBankDetails } from "@/lib/config";
+import { getBusinessConfig, getLandlords, landlordHasBankDetails } from "@/lib/config";
 
 export const metadata: Metadata = {
   title: "For tenants",
@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function ForTenantsPage() {
   const config = getBusinessConfig();
-  const bank = hasBankDetails(config);
+  const landlords = getLandlords().filter((landlord) => landlordHasBankDetails(landlord.id));
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
@@ -27,39 +27,40 @@ export default function ForTenantsPage() {
         <p className="mt-3 text-base leading-relaxed text-ink/80">
           Rent is due by bank transfer. Each invoice has its own payment
           reference in the form{" "}
-          <span className="font-mono text-sm">SWAN-unit-MONYY</span> — for
-          example, unit 4 in September 2026 would be{" "}
-          <span className="font-mono text-sm">SWAN-4-SEP26</span>. Please put
-          that reference on the transfer in full. It is how we match your
-          payment to the right invoice.
+          <span className="font-mono text-sm">SWAN-J-7-8-SEP26</span> or{" "}
+          <span className="font-mono text-sm">SWAN-D-10-SEP26</span> — Jack’s
+          invoices use J, David’s use D, then the garage numbers on that
+          invoice, then the month. If you rent from both, you will get two
+          invoices that month. Please put the reference on the transfer in
+          full. It is how we match your payment to the right invoice.
         </p>
-        {bank ? (
-          <div className="mt-4 rounded-lg bg-white p-4 text-sm ring-1 ring-border">
-            <p>
-              <span className="text-muted-foreground">Account name</span>
-              <br />
-              {config.name}
-            </p>
-            <p className="mt-2">
-              <span className="text-muted-foreground">Sort code</span>
-              <br />
-              {config.sortCode}
-            </p>
-            <p className="mt-2">
-              <span className="text-muted-foreground">Account number</span>
-              <br />
-              {config.accountNumber}
-            </p>
+        {landlords.length > 0 ? (
+          <div className="mt-4 space-y-4">
+            {landlords.map((landlord) => (
+              <div key={landlord.id} className="rounded-lg bg-white p-4 text-sm ring-1 ring-border">
+                <p className="font-medium text-ink">{landlord.name}</p>
+                <p className="mt-2">
+                  <span className="text-muted-foreground">Sort code</span>
+                  <br />
+                  {landlord.sortCode}
+                </p>
+                <p className="mt-2">
+                  <span className="text-muted-foreground">Account number</span>
+                  <br />
+                  {landlord.accountNumber}
+                </p>
+              </div>
+            ))}
           </div>
         ) : (
           <p className="mt-3 text-base leading-relaxed text-ink/80">
-            Bank details are printed on your invoice when we have them set up,
-            or we will give them to you directly.
+            Bank details are printed on your invoice when we have them set up
+            for that landlord, or we will give them to you directly.
           </p>
         )}
         <p className="mt-3 text-base leading-relaxed text-ink/80">
           Invoices are raised at the start of the month. If email is working on
-          our side, a copy comes to the address we have for you, with a PDF.
+          our side, a copy comes from the landlord of those garages, with a PDF.
         </p>
       </section>
 

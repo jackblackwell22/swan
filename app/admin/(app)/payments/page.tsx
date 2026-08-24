@@ -30,8 +30,11 @@ export default async function PaymentsPage({
         <h1 className="text-3xl text-ink">Payments</h1>
         <p className="text-sm text-muted-foreground">
           Mark an invoice paid, or upload a bank statement CSV. Matching on the payment
-          reference is automatic when the amount agrees. Matching on amount and date only
-          is a suggestion you confirm — never automatic if two tenants share the same rent.
+          reference is automatic when the amount agrees — for example{" "}
+          <span className="font-mono">SWAN-J-7-8-SEP26</span> or{" "}
+          <span className="font-mono">SWAN-D-10-SEP26</span> (J is Jack, D is David, then
+          the garage numbers, then the month). Amount and date alone are only a
+          suggestion you confirm — never automatic if two tenants share the same rent.
         </p>
       </div>
 

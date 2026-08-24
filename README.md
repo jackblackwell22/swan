@@ -73,12 +73,15 @@ Anything left blank is **hidden**. That is deliberate.
 | `BUSINESS_PHONE` | Your real telephone, or blank |
 | `VAT_REGISTERED` | `true` only if you are VAT registered |
 | `VAT_NUMBER` | Only if you want it on invoices |
-| `BANK_SORT_CODE` / `BANK_ACCOUNT_NUMBER` | Printed on invoices **only if both are set** |
+| `JACK_FROM_EMAIL` / `DAVID_FROM_EMAIL` | From address on that landlord’s invoices. Leave blank until real — PDFs still generate. |
+| `JACK_BANK_SORT_CODE` / `JACK_BANK_ACCOUNT_NUMBER` | Jack’s BACS details, printed only when both are set |
+| `DAVID_BANK_SORT_CODE` / `DAVID_BANK_ACCOUNT_NUMBER` | David’s BACS details, printed only when both are set |
 | `ADMIN1_EMAIL` / `ADMIN1_PASSWORD` | First owner. Trial: `dad@example.com` / `change-me-dad` |
 | `ADMIN2_EMAIL` / `ADMIN2_PASSWORD` | Second owner. Trial: `son@example.com` / `change-me-son` |
 | `SESSION_SECRET` | A long random sentence, at least 32 characters. Do not share it. |
 | `CRON_SECRET` | Another long random string, used if your host runs the monthly job by web address |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `FROM_EMAIL` | Your domain mailbox. Leave blank until it exists — PDFs still work. |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` | Shared mailbox for sending. Leave blank until it exists. |
+| `FROM_EMAIL` | From address for website enquiries only |
 | `SITE_URL` | `http://127.0.0.1:43141` while testing; later `https://your-domain` |
 
 There is no company number, VAT number or bank account invented for you. Add those only when they are real.
@@ -89,22 +92,31 @@ There is no company number, VAT number or bank account invented for you. Add tho
 
 Sign in at `/admin`.
 
-1. **Tenants** — add each person or business: name, email, the label you use for the unit (1, 2, 3 or whatever you write), monthly rent in pounds, business or private, active or ended.
-2. **This month** — “Create this month’s invoices” makes a numbered PDF for every **active** tenant. You can also invoice one tenant from their page.
-3. **Invoices** — download the PDF, email it (if SMTP is filled in), resend, or mark paid. If email is not set up, a yellow note says so; you can still download the PDF.
-4. **Payments** — one click marks an invoice paid. Or upload a CSV from online banking. The site looks for the payment reference first (`SWAN-4-SEP26`). Amount and date alone are only a **suggestion** you confirm. If two tenants pay the same rent, it will not guess.
+1. **Garages** — the six lock-ups are numbered **7, 8, 9, 10, 11, 12**. For each one, choose Jack Blackwell or David Blackwell. Leave it unset until you know; the desk will not guess.
+2. **Tenants** — name, email, which of 7–12 they rent (one or more), rent **per garage**, business or private, active or ended. A garage can only be let to one active tenant at a time.
+3. **This month** — “Create this month’s invoices” makes PDFs for every **active** tenant. One invoice per tenant per landlord per month: two of Jack’s units is one Jack invoice with two line items; one of Jack’s and one of David’s is two invoices. You can also invoice one tenant from their page.
+4. **Invoices** — download the PDF, email it (if that landlord’s from-email and SMTP are filled in), resend, or mark paid. If a landlord’s email is not set, the PDF still generates and the desk says email is not set up for them.
+5. **Payments** — one click marks an invoice paid. Or upload a CSV from online banking. The site looks for the payment reference first (`SWAN-J-7-8-SEP26`). Amount and date alone are only a **suggestion** you confirm. If two tenants pay the same rent, it will not guess.
+
+Both of you use the same owners’ desk. Jack and David are the two landlords, not two separate apps.
 
 On a development computer the site includes a few tenants clearly named **EXAMPLE** / **sample data**. They are not real and are not created when the site runs in production.
 
 ### Payment references
 
-Every invoice has a unique reference:
+Every invoice has a unique reference so BACS matching works:
 
-`SWAN-{unit}-{MON}{YY}`
+`SWAN-{J or D}-{garage numbers}-{MON}{YY}`
 
-Example: unit 4, September 2026 → `SWAN-4-SEP26`.
+- **J** is Jack Blackwell, **D** is David Blackwell.
+- Garage numbers on that invoice are listed in order, hyphen-separated.
 
-Ask tenants to put that on the bank transfer in full. That is how matching works without paying a bank API.
+Examples:
+
+- Jack, garages 7 and 8, September 2026 → `SWAN-J-7-8-SEP26`
+- David, garage 10, September 2026 → `SWAN-D-10-SEP26`
+
+Ask tenants to put that on the bank transfer in full. CSV matching still uses this reference first. That is how matching works without paying a bank API.
 
 ---
 
@@ -115,9 +127,10 @@ When you buy a domain, the host almost always includes a mailbox. In `.env.local
 - `SMTP_HOST` — your host will tell you, often something like `mail.yourdomain.co.uk`
 - `SMTP_PORT` — usually `587` (or `465` with `SMTP_SECURE=true`)
 - `SMTP_USER` / `SMTP_PASS` — the mailbox login
-- `FROM_EMAIL` — the same address, or a “from” address the host allows
+- `JACK_FROM_EMAIL` / `DAVID_FROM_EMAIL` — the From address on that landlord’s invoices (the shared SMTP host still sends them)
+- `FROM_EMAIL` — From address for website enquiry notifications
 
-Until those are filled, invoices are still generated. They are just not emailed automatically.
+Until SMTP is filled, invoices are still generated. They are just not emailed automatically. If SMTP is set but a landlord’s from-email is empty, that landlord’s PDFs still generate and the desk says email is not set up for them.
 
 ---
 
@@ -182,7 +195,7 @@ Most UK banks let you download transactions as CSV. A simple file looks like the
 
 ```text
 Date,Description,Amount
-01/08/2026,BACS SWAN-EX1-AUG26 RIVERSIDE,175.00
+01/08/2026,BACS SWAN-J-7-AUG26 RIVERSIDE,175.00
 ```
 
 Columns named Date, Description and Amount (or “Paid in” / “Money in”) are understood. Only money **in** is read. We do not store anyone’s account number from the file.

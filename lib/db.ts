@@ -2,7 +2,14 @@ import fs from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
 import bcrypt from "bcryptjs";
-import { getAdminSeeds, getDatabasePath, isDevelopment } from "@/lib/config";
+import {
+  GARAGE_NUMBERS,
+  LANDLORD_NAMES,
+  getAdminSeeds,
+  getDatabasePath,
+  isDevelopment,
+  isLandlordId,
+} from "@/lib/config";
 
 const globalForDb = globalThis as unknown as {
   swanDb?: Database.Database;
@@ -35,9 +42,28 @@ export type Tenant = {
   created_at: string;
 };
 
+export type TenantGarage = {
+  tenant_id: number;
+  garage_number: number;
+  rent_pence: number;
+};
+
+export type Garage = {
+  number: number;
+  landlord_id: "jack" | "david" | null;
+};
+
+export type InvoiceLine = {
+  id: number;
+  invoice_id: number;
+  garage_number: number;
+  amount_pence: number;
+};
+
 export type Invoice = {
   id: number;
   tenant_id: number;
+  landlord_id: string;
   invoice_number: string;
   period_start: string;
   period_end: string;
@@ -59,6 +85,8 @@ export type InvoiceWithTenant = Invoice & {
   tenant_email: string;
   unit_label: string;
   is_sample: number;
+  landlord_name: string;
+  lines: InvoiceLine[];
 };
 
 export type Payment = {
@@ -183,11 +211,59 @@ function migrate(db: Database.Database) {
       created_at TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS invoice_lines (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      invoice_id INTEGER NOT NULL REFERENCES invoices(id),
+      garage_number INTEGER NOT NULL,
+      amount_pence INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS garages (
+      number INTEGER PRIMARY KEY,
+      landlord_id TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS tenant_garages (
+      tenant_id INTEGER NOT NULL REFERENCES tenants(id),
+      garage_number INTEGER NOT NULL,
+      rent_pence INTEGER NOT NULL,
+      PRIMARY KEY (tenant_id, garage_number)
+    );
+
     CREATE INDEX IF NOT EXISTS idx_invoices_tenant ON invoices(tenant_id);
     CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
     CREATE INDEX IF NOT EXISTS idx_invoices_period ON invoices(period_start);
     CREATE INDEX IF NOT EXISTS idx_login_attempts_key ON login_attempts(key, attempted_at);
+    CREATE INDEX IF NOT EXISTS idx_tenant_garages_garage ON tenant_garages(garage_number);
   `);
+  addColumnIfMissing(db, "invoices", "landlord_id", "TEXT NOT NULL DEFAULT ''");
+  db.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_invoices_tenant_landlord_period
+    ON invoices(tenant_id, landlord_id, period_start)
+    WHERE landlord_id != '';
+  `);
+  seedGarages(db);
+}
+
+function addColumnIfMissing(
+  db: Database.Database,
+  table: string,
+  column: string,
+  definition: string,
+) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+  if (!cols.some((col) => col.name === column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
+}
+
+function seedGarages(db: Database.Database) {
+  const insert = db.prepare(
+    "INSERT OR IGNORE INTO garages (number, landlord_id) VALUES (?, NULL)",
+  );
+  for (const number of GARAGE_NUMBERS) {
+    insert.run(number);
+  }
 }
 
 function adminFingerprint(): string {
@@ -231,43 +307,77 @@ function syncAdmins(db: Database.Database) {
 function seedSampleTenants(db: Database.Database) {
   if (!isDevelopment()) return;
   const count = db.prepare("SELECT COUNT(*) AS n FROM tenants").get() as { n: number };
-  if (count.n > 0) return;
   const now = new Date().toISOString();
-  const samples: Array<Omit<Tenant, "id" | "created_at">> = [
-    {
-      name: "EXAMPLE — Riverside Cycles Ltd (sample data)",
-      email: "example-riverside@invalid.test",
-      unit_label: "Ex1",
-      monthly_rent_pence: 17500,
-      tenant_type: "business",
-      status: "active",
-      is_sample: 1,
-    },
-    {
-      name: "EXAMPLE — A. Patel (sample data)",
-      email: "example-patel@invalid.test",
-      unit_label: "Ex2",
-      monthly_rent_pence: 12000,
-      tenant_type: "private",
-      status: "active",
-      is_sample: 1,
-    },
-    {
-      name: "EXAMPLE — J. Hughes (sample data)",
-      email: "example-hughes@invalid.test",
-      unit_label: "Ex3",
-      monthly_rent_pence: 12000,
-      tenant_type: "private",
-      status: "active",
-      is_sample: 1,
-    },
-  ];
+  if (count.n === 0) {
+    const samples = [
+      {
+        name: "EXAMPLE — Riverside Cycles Ltd (sample data)",
+        email: "example-riverside@invalid.test",
+        unit_label: "7",
+        monthly_rent_pence: 17500,
+        tenant_type: "business" as const,
+        status: "active" as const,
+        is_sample: 1,
+        garage: 7,
+      },
+      {
+        name: "EXAMPLE — A. Patel (sample data)",
+        email: "example-patel@invalid.test",
+        unit_label: "8",
+        monthly_rent_pence: 12000,
+        tenant_type: "private" as const,
+        status: "active" as const,
+        is_sample: 1,
+        garage: 8,
+      },
+      {
+        name: "EXAMPLE — J. Hughes (sample data)",
+        email: "example-hughes@invalid.test",
+        unit_label: "9",
+        monthly_rent_pence: 12000,
+        tenant_type: "private" as const,
+        status: "active" as const,
+        is_sample: 1,
+        garage: 9,
+      },
+    ];
+    const insert = db.prepare(
+      `INSERT INTO tenants (name, email, unit_label, monthly_rent_pence, tenant_type, status, is_sample, created_at)
+       VALUES (@name, @email, @unit_label, @monthly_rent_pence, @tenant_type, @status, @is_sample, @created_at)`,
+    );
+    const assign = db.prepare(
+      `INSERT OR IGNORE INTO tenant_garages (tenant_id, garage_number, rent_pence) VALUES (?, ?, ?)`,
+    );
+    for (const sample of samples) {
+      const result = insert.run({ ...sample, created_at: now });
+      assign.run(Number(result.lastInsertRowid), sample.garage, sample.monthly_rent_pence);
+    }
+  }
+}
+
+function backfillTenantGarages(db: Database.Database) {
+  const tenants = db.prepare("SELECT * FROM tenants").all() as Tenant[];
   const insert = db.prepare(
-    `INSERT INTO tenants (name, email, unit_label, monthly_rent_pence, tenant_type, status, is_sample, created_at)
-     VALUES (@name, @email, @unit_label, @monthly_rent_pence, @tenant_type, @status, @is_sample, @created_at)`,
+    "INSERT OR IGNORE INTO tenant_garages (tenant_id, garage_number, rent_pence) VALUES (?, ?, ?)",
   );
-  for (const sample of samples) {
-    insert.run({ ...sample, created_at: now });
+  for (const tenant of tenants) {
+    const existing = db
+      .prepare("SELECT 1 AS n FROM tenant_garages WHERE tenant_id = ?")
+      .get(tenant.id) as { n: number } | undefined;
+    if (existing) continue;
+    const numbers = String(tenant.unit_label)
+      .split(/[^0-9]+/)
+      .map((part) => Number.parseInt(part, 10))
+      .filter((n) => GARAGE_NUMBERS.includes(n as (typeof GARAGE_NUMBERS)[number]));
+    if (numbers.length === 0) continue;
+    const each = Math.round(tenant.monthly_rent_pence / numbers.length);
+    let allocated = 0;
+    for (let i = 0; i < numbers.length; i += 1) {
+      const rent =
+        i === numbers.length - 1 ? tenant.monthly_rent_pence - allocated : each;
+      insert.run(tenant.id, numbers[i], rent);
+      allocated += rent;
+    }
   }
 }
 
@@ -281,10 +391,134 @@ export function getDb(): Database.Database {
     db.pragma("foreign_keys = ON");
     migrate(db);
     seedSampleTenants(db);
+    backfillTenantGarages(db);
     globalForDb.swanDb = db;
   }
   syncAdmins(globalForDb.swanDb);
   return globalForDb.swanDb;
+}
+
+export function listGarages(): Array<Garage & { tenant_name: string | null; tenant_id: number | null }> {
+  return getDb()
+    .prepare(
+      `SELECT garages.number, garages.landlord_id,
+              (
+                SELECT tenants.name
+                FROM tenant_garages
+                JOIN tenants ON tenants.id = tenant_garages.tenant_id
+                WHERE tenant_garages.garage_number = garages.number
+                  AND tenants.status = 'active'
+                LIMIT 1
+              ) AS tenant_name,
+              (
+                SELECT tenants.id
+                FROM tenant_garages
+                JOIN tenants ON tenants.id = tenant_garages.tenant_id
+                WHERE tenant_garages.garage_number = garages.number
+                  AND tenants.status = 'active'
+                LIMIT 1
+              ) AS tenant_id
+       FROM garages
+       ORDER BY garages.number`,
+    )
+    .all() as Array<Garage & { tenant_name: string | null; tenant_id: number | null }>;
+}
+
+export function setGarageLandlord(number: number, landlordId: string | null) {
+  if (!GARAGE_NUMBERS.includes(number as (typeof GARAGE_NUMBERS)[number])) {
+    throw new Error("That is not one of the lock-ups (7–12).");
+  }
+  if (landlordId && landlordId !== "jack" && landlordId !== "david") {
+    throw new Error("Choose Jack or David, or leave unassigned.");
+  }
+  getDb()
+    .prepare("UPDATE garages SET landlord_id = ? WHERE number = ?")
+    .run(landlordId, number);
+}
+
+export function getTenantGarages(tenantId: number): TenantGarage[] {
+  return getDb()
+    .prepare(
+      "SELECT tenant_id, garage_number, rent_pence FROM tenant_garages WHERE tenant_id = ? ORDER BY garage_number",
+    )
+    .all(tenantId) as TenantGarage[];
+}
+
+export type TenantGarageAssignment = TenantGarage & {
+  landlord_id: "jack" | "david" | null;
+};
+
+export function getTenantGarageAssignments(tenantId: number): TenantGarageAssignment[] {
+  return getDb()
+    .prepare(
+      `SELECT tenant_garages.tenant_id, tenant_garages.garage_number, tenant_garages.rent_pence,
+              garages.landlord_id
+       FROM tenant_garages
+       JOIN garages ON garages.number = tenant_garages.garage_number
+       WHERE tenant_garages.tenant_id = ?
+       ORDER BY tenant_garages.garage_number`,
+    )
+    .all(tenantId) as TenantGarageAssignment[];
+}
+
+export function garageOccupiedBy(
+  garageNumber: number,
+  exceptTenantId?: number,
+): { id: number; name: string } | undefined {
+  const row = getDb()
+    .prepare(
+      `SELECT tenants.id, tenants.name
+       FROM tenant_garages
+       JOIN tenants ON tenants.id = tenant_garages.tenant_id
+       WHERE tenant_garages.garage_number = ?
+         AND tenants.status = 'active'
+         AND tenants.id != ?`,
+    )
+    .get(garageNumber, exceptTenantId ?? 0) as { id: number; name: string } | undefined;
+  return row;
+}
+
+function syncTenantGarageSummary(db: Database.Database, tenantId: number) {
+  const rows = db
+    .prepare(
+      "SELECT garage_number, rent_pence FROM tenant_garages WHERE tenant_id = ? ORDER BY garage_number",
+    )
+    .all(tenantId) as Array<{ garage_number: number; rent_pence: number }>;
+  const label = rows.map((row) => String(row.garage_number)).join(", ") || "";
+  const total = rows.reduce((sum, row) => sum + row.rent_pence, 0);
+  db.prepare("UPDATE tenants SET unit_label = ?, monthly_rent_pence = ? WHERE id = ?").run(
+    label,
+    total,
+    tenantId,
+  );
+}
+
+export function setTenantGarages(
+  tenantId: number,
+  assignments: Array<{ garage_number: number; rent_pence: number }>,
+) {
+  const db = getDb();
+  for (const assignment of assignments) {
+    if (!GARAGE_NUMBERS.includes(assignment.garage_number as (typeof GARAGE_NUMBERS)[number])) {
+      throw new Error("Garages are numbered 7 to 12.");
+    }
+    const taken = garageOccupiedBy(assignment.garage_number, tenantId);
+    if (taken) {
+      throw new Error(
+        `Garage ${assignment.garage_number} is already let to ${taken.name}.`,
+      );
+    }
+  }
+  db.transaction(() => {
+    db.prepare("DELETE FROM tenant_garages WHERE tenant_id = ?").run(tenantId);
+    const insert = db.prepare(
+      "INSERT INTO tenant_garages (tenant_id, garage_number, rent_pence) VALUES (?, ?, ?)",
+    );
+    for (const assignment of assignments) {
+      insert.run(tenantId, assignment.garage_number, assignment.rent_pence);
+    }
+    syncTenantGarageSummary(db, tenantId);
+  })();
 }
 
 export function getAdminByEmail(email: string): Admin | undefined {
@@ -343,26 +577,26 @@ export function getTenant(id: number): Tenant | undefined {
 export function createTenant(input: {
   name: string;
   email: string;
-  unit_label: string;
-  monthly_rent_pence: number;
   tenant_type: TenantType;
   status: TenantStatus;
+  garages: Array<{ garage_number: number; rent_pence: number }>;
 }): Tenant {
-  const result = getDb()
-    .prepare(
-      `INSERT INTO tenants (name, email, unit_label, monthly_rent_pence, tenant_type, status, is_sample, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, 0, ?)`,
-    )
-    .run(
-      input.name,
-      input.email,
-      input.unit_label,
-      input.monthly_rent_pence,
-      input.tenant_type,
-      input.status,
-      new Date().toISOString(),
-    );
-  return getTenant(Number(result.lastInsertRowid))!;
+  if (input.garages.length === 0) {
+    throw new Error("Assign at least one garage (7–12).");
+  }
+  const db = getDb();
+  const id = db.transaction(() => {
+    const result = db
+      .prepare(
+        `INSERT INTO tenants (name, email, unit_label, monthly_rent_pence, tenant_type, status, is_sample, created_at)
+         VALUES (?, ?, '', 0, ?, ?, 0, ?)`,
+      )
+      .run(input.name, input.email, input.tenant_type, input.status, new Date().toISOString());
+    const tenantId = Number(result.lastInsertRowid);
+    setTenantGarages(tenantId, input.garages);
+    return tenantId;
+  })();
+  return getTenant(id)!;
 }
 
 export function updateTenant(
@@ -370,25 +604,21 @@ export function updateTenant(
   input: {
     name: string;
     email: string;
-    unit_label: string;
-    monthly_rent_pence: number;
     tenant_type: TenantType;
     status: TenantStatus;
+    garages: Array<{ garage_number: number; rent_pence: number }>;
   },
 ) {
-  getDb()
-    .prepare(
-      `UPDATE tenants SET name = ?, email = ?, unit_label = ?, monthly_rent_pence = ?, tenant_type = ?, status = ? WHERE id = ?`,
-    )
-    .run(
-      input.name,
-      input.email,
-      input.unit_label,
-      input.monthly_rent_pence,
-      input.tenant_type,
-      input.status,
-      id,
-    );
+  if (input.garages.length === 0) {
+    throw new Error("Assign at least one garage (7–12).");
+  }
+  const db = getDb();
+  db.transaction(() => {
+    db.prepare(
+      `UPDATE tenants SET name = ?, email = ?, tenant_type = ?, status = ? WHERE id = ?`,
+    ).run(input.name, input.email, input.tenant_type, input.status, id);
+    setTenantGarages(id, input.garages);
+  })();
 }
 
 const invoiceSelect = `
@@ -398,32 +628,58 @@ const invoiceSelect = `
   JOIN tenants ON tenants.id = invoices.tenant_id
 `;
 
+function withInvoiceExtras<T extends Invoice>(row: T): T & { landlord_name: string; lines: InvoiceLine[] } {
+  const lines = getDb()
+    .prepare(
+      "SELECT id, invoice_id, garage_number, amount_pence FROM invoice_lines WHERE invoice_id = ? ORDER BY garage_number",
+    )
+    .all(row.id) as InvoiceLine[];
+  return {
+    ...row,
+    landlord_name: isLandlordId(row.landlord_id) ? LANDLORD_NAMES[row.landlord_id] : "",
+    lines,
+  };
+}
+
 export function listInvoices(): InvoiceWithTenant[] {
-  return getDb()
+  const rows = getDb()
     .prepare(`${invoiceSelect} ORDER BY invoices.issue_date DESC, invoices.id DESC`)
-    .all() as InvoiceWithTenant[];
+    .all() as Array<Invoice & { tenant_name: string; tenant_email: string; unit_label: string; is_sample: number }>;
+  return rows.map(withInvoiceExtras);
 }
 
 export function getInvoice(id: number): InvoiceWithTenant | undefined {
-  return getDb()
+  const row = getDb()
     .prepare(`${invoiceSelect} WHERE invoices.id = ?`)
-    .get(id) as InvoiceWithTenant | undefined;
+    .get(id) as
+    | (Invoice & { tenant_name: string; tenant_email: string; unit_label: string; is_sample: number })
+    | undefined;
+  return row ? withInvoiceExtras(row) : undefined;
 }
 
 export function getInvoiceByReference(reference: string): InvoiceWithTenant | undefined {
-  return getDb()
+  const row = getDb()
     .prepare(`${invoiceSelect} WHERE invoices.payment_reference = ?`)
-    .get(reference) as InvoiceWithTenant | undefined;
+    .get(reference) as
+    | (Invoice & { tenant_name: string; tenant_email: string; unit_label: string; is_sample: number })
+    | undefined;
+  return row ? withInvoiceExtras(row) : undefined;
 }
 
-export function findInvoiceForPeriod(tenantId: number, periodStart: string): Invoice | undefined {
+export function findInvoiceForPeriod(
+  tenantId: number,
+  periodStart: string,
+  landlordId: string,
+): Invoice | undefined {
   return getDb()
-    .prepare("SELECT * FROM invoices WHERE tenant_id = ? AND period_start = ?")
-    .get(tenantId, periodStart) as Invoice | undefined;
+    .prepare(
+      "SELECT * FROM invoices WHERE tenant_id = ? AND period_start = ? AND landlord_id = ?",
+    )
+    .get(tenantId, periodStart, landlordId) as Invoice | undefined;
 }
 
-export function nextInvoiceNumber(year: number, month: number): string {
-  const prefix = `SSI-${String(year).slice(-2)}${String(month).padStart(2, "0")}-`;
+export function nextInvoiceNumber(year: number, month: number, landlordCode: "J" | "D"): string {
+  const prefix = `SSI-${landlordCode}-${String(year).slice(-2)}${String(month).padStart(2, "0")}-`;
   const row = getDb()
     .prepare(
       "SELECT invoice_number FROM invoices WHERE invoice_number LIKE ? ORDER BY invoice_number DESC LIMIT 1",
@@ -437,6 +693,7 @@ export function nextInvoiceNumber(year: number, month: number): string {
 
 export function insertInvoice(input: {
   tenant_id: number;
+  landlord_id: string;
   invoice_number: string;
   period_start: string;
   period_end: string;
@@ -445,29 +702,40 @@ export function insertInvoice(input: {
   amount_pence: number;
   payment_reference: string;
   pdf_path: string | null;
+  lines: Array<{ garage_number: number; amount_pence: number }>;
 }): Invoice {
-  const result = getDb()
-    .prepare(
-      `INSERT INTO invoices (
-        tenant_id, invoice_number, period_start, period_end, issue_date, due_date,
-        amount_pence, status, payment_reference, pdf_path, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?)`,
-    )
-    .run(
-      input.tenant_id,
-      input.invoice_number,
-      input.period_start,
-      input.period_end,
-      input.issue_date,
-      input.due_date,
-      input.amount_pence,
-      input.payment_reference,
-      input.pdf_path,
-      new Date().toISOString(),
+  const db = getDb();
+  const id = db.transaction(() => {
+    const result = db
+      .prepare(
+        `INSERT INTO invoices (
+          tenant_id, landlord_id, invoice_number, period_start, period_end, issue_date, due_date,
+          amount_pence, status, payment_reference, pdf_path, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?)`,
+      )
+      .run(
+        input.tenant_id,
+        input.landlord_id,
+        input.invoice_number,
+        input.period_start,
+        input.period_end,
+        input.issue_date,
+        input.due_date,
+        input.amount_pence,
+        input.payment_reference,
+        input.pdf_path,
+        new Date().toISOString(),
+      );
+    const invoiceId = Number(result.lastInsertRowid);
+    const insertLine = db.prepare(
+      "INSERT INTO invoice_lines (invoice_id, garage_number, amount_pence) VALUES (?, ?, ?)",
     );
-  return getDb()
-    .prepare("SELECT * FROM invoices WHERE id = ?")
-    .get(Number(result.lastInsertRowid)) as Invoice;
+    for (const line of input.lines) {
+      insertLine.run(invoiceId, line.garage_number, line.amount_pence);
+    }
+    return invoiceId;
+  })();
+  return db.prepare("SELECT * FROM invoices WHERE id = ?").get(id) as Invoice;
 }
 
 export function updateInvoicePdfPath(id: number, pdfPath: string) {
@@ -509,23 +777,27 @@ export function refreshOverdueStatuses(todayISO: string) {
 }
 
 export function unpaidInvoices(): InvoiceWithTenant[] {
-  return getDb()
+  const rows = getDb()
     .prepare(
       `${invoiceSelect} WHERE invoices.status IN ('draft', 'sent', 'overdue') ORDER BY invoices.due_date ASC`,
     )
-    .all() as InvoiceWithTenant[];
+    .all() as Array<Invoice & { tenant_name: string; tenant_email: string; unit_label: string; is_sample: number }>;
+  return rows.map(withInvoiceExtras);
 }
 
 export function invoicesNeedingReminder(kind: 7 | 14, todayISO: string): InvoiceWithTenant[] {
   const column = kind === 7 ? "reminder_7_sent_at" : "reminder_14_sent_at";
-  return getDb()
+  const rows = getDb()
     .prepare(
       `${invoiceSelect}
        WHERE invoices.status IN ('sent', 'overdue')
          AND invoices.${column} IS NULL
          AND date(invoices.issue_date, '+${kind} days') <= date(?)`,
     )
-    .all(todayISO) as InvoiceWithTenant[];
+    .all(todayISO) as Array<
+    Invoice & { tenant_name: string; tenant_email: string; unit_label: string; is_sample: number }
+  >;
+  return rows.map(withInvoiceExtras);
 }
 
 export function markReminderSent(id: number, kind: 7 | 14) {

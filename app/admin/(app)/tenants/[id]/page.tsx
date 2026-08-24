@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { TenantForm } from "@/components/admin/tenant-form";
 import { GenerateInvoiceButton } from "@/components/admin/generate-invoice-button";
-import { getTenant, listInvoices } from "@/lib/db";
+import { getTenant, getTenantGarageAssignments, getTenantGarages, listGarages, listInvoices } from "@/lib/db";
 import { formatGBP } from "@/lib/format";
 import Link from "next/link";
 
@@ -16,7 +16,15 @@ export default async function TenantDetailPage({
   const { id } = await params;
   const tenant = getTenant(Number(id));
   if (!tenant) notFound();
+  const assignments = getTenantGarages(tenant.id);
+  const assignmentDetails = getTenantGarageAssignments(tenant.id);
+  const unowned = assignmentDetails.filter((row) => !row.landlord_id);
+  const garages = listGarages();
   const invoices = listInvoices().filter((invoice) => invoice.tenant_id === tenant.id);
+  const garageLabel =
+    assignments.length > 0
+      ? assignments.map((row) => row.garage_number).join(", ")
+      : tenant.unit_label;
 
   return (
     <div className="space-y-8">
@@ -24,7 +32,8 @@ export default async function TenantDetailPage({
         <div>
           <h1 className="text-3xl text-ink">{tenant.name}</h1>
           <p className="text-sm text-muted-foreground">
-            Unit {tenant.unit_label} · {formatGBP(tenant.monthly_rent_pence)} a month
+            Garage{assignments.length === 1 ? "" : "s"} {garageLabel || "—"} ·{" "}
+            {formatGBP(tenant.monthly_rent_pence)} a month
           </p>
           {tenant.is_sample ? (
             <Badge variant="secondary" className="mt-2">
@@ -34,7 +43,18 @@ export default async function TenantDetailPage({
         </div>
         <GenerateInvoiceButton tenantId={tenant.id} />
       </div>
-      <TenantForm tenant={tenant} />
+      {unowned.length > 0 ? (
+        <p className="rounded-lg bg-white p-4 text-sm text-muted-foreground ring-1 ring-border">
+          Garage{unowned.length === 1 ? "" : "s"}{" "}
+          {unowned.map((row) => row.garage_number).join(", ")}{" "}
+          {unowned.length === 1 ? "has" : "have"} no landlord yet. Set Jack or David on{" "}
+          <Link href="/admin/garages" className="text-door underline-offset-2 hover:underline">
+            Garages
+          </Link>{" "}
+          before invoicing.
+        </p>
+      ) : null}
+      <TenantForm tenant={tenant} assignments={assignments} garages={garages} />
       <section>
         <h2 className="mb-3 text-xl text-ink">Invoices</h2>
         {invoices.length === 0 ? (
@@ -46,7 +66,8 @@ export default async function TenantDetailPage({
                 <Link className="text-door underline-offset-2 hover:underline" href={`/admin/invoices/${invoice.id}`}>
                   {invoice.invoice_number}
                 </Link>{" "}
-                · {invoice.status} · {invoice.payment_reference}
+                · {invoice.landlord_name || "no landlord"} · {invoice.status} · {invoice.payment_reference}
+                {invoice.lines.length > 1 ? ` · ${invoice.lines.length} line items` : ""}
               </li>
             ))}
           </ul>

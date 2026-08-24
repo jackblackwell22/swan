@@ -1,7 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
-import type { BusinessConfig } from "@/lib/config";
+import {
+  getBusinessConfig,
+  getLandlordConfig,
+  isLandlordId,
+  type LandlordProfile,
+} from "@/lib/config";
 import { formatGBP, formatUKDate, periodLabel } from "@/lib/format";
 import type { InvoiceWithTenant } from "@/lib/db";
 
@@ -17,10 +22,24 @@ function invoicePdfPath(invoiceNumber: string): string {
   return path.join(process.cwd(), "data", "invoices", `${safe}.pdf`);
 }
 
-export async function writeInvoicePdf(
-  invoice: InvoiceWithTenant,
-  config: BusinessConfig,
-): Promise<string> {
+function garagePhrase(invoice: InvoiceWithTenant): string {
+  const numbers = invoice.lines.map((row) => row.garage_number);
+  if (numbers.length === 0 && invoice.unit_label) return `garage ${invoice.unit_label}`;
+  if (numbers.length === 1) return `garage ${numbers[0]}`;
+  if (numbers.length === 2) return `garages ${numbers[0]} and ${numbers[1]}`;
+  return `garages ${numbers.slice(0, -1).join(", ")} and ${numbers[numbers.length - 1]}`;
+}
+
+export async function writeInvoicePdf(invoice: InvoiceWithTenant): Promise<string> {
+  const config = getBusinessConfig();
+  const landlord: LandlordProfile | null = isLandlordId(invoice.landlord_id)
+    ? getLandlordConfig(invoice.landlord_id)
+    : null;
+  const fromName = landlord?.name || invoice.landlord_name || config.name;
+  const fromEmail = landlord?.fromEmail || "";
+  const sortCode = landlord?.sortCode || "";
+  const accountNumber = landlord?.accountNumber || "";
+
   const pdf = await PDFDocument.create();
   const page = pdf.addPage([595.28, 841.89]);
   const serifBold = await pdf.embedFont(StandardFonts.TimesRomanBold);
@@ -46,20 +65,16 @@ export async function writeInvoicePdf(
   let y = 760;
   page.drawText("From", { x: 48, y, size: 9, font: sansBold, color: brick });
   y -= 16;
-  page.drawText(config.name, { x: 48, y, size: 11, font: serifBold, color: ink });
+  page.drawText(fromName, { x: 48, y, size: 11, font: serifBold, color: ink });
   if (config.address) {
     for (const part of config.address.split(",").map((s) => s.trim()).filter(Boolean)) {
       y -= 14;
       page.drawText(part, { x: 48, y, size: 10, font: sans, color: ink });
     }
   }
-  if (config.email) {
+  if (fromEmail) {
     y -= 14;
-    page.drawText(config.email, { x: 48, y, size: 10, font: sans, color: ink });
-  }
-  if (config.phone) {
-    y -= 14;
-    page.drawText(config.phone, { x: 48, y, size: 10, font: sans, color: ink });
+    page.drawText(fromEmail, { x: 48, y, size: 10, font: sans, color: ink });
   }
   if (config.vatRegistered) {
     y -= 14;
@@ -89,7 +104,7 @@ export async function writeInvoicePdf(
   y -= 14;
   page.drawText(invoice.tenant_email, { x: 48, y, size: 10, font: sans, color: ink });
   y -= 14;
-  page.drawText(`Lock-up unit ${invoice.unit_label}`, {
+  page.drawText(`Lock-up ${garagePhrase(invoice)}`, {
     x: 48,
     y,
     size: 10,
@@ -108,23 +123,35 @@ export async function writeInvoicePdf(
     });
   }
 
+  const lines =
+    invoice.lines.length > 0
+      ? invoice.lines.map((row) => ({
+          description: `Lock-up garage ${row.garage_number} — ${periodLabel(invoice.period_start)} (${formatUKDate(invoice.period_start)} to ${formatUKDate(invoice.period_end)})`,
+          amount: row.amount_pence,
+        }))
+      : [
+          {
+            description: `Lock-up garage ${invoice.unit_label} — ${periodLabel(invoice.period_start)} (${formatUKDate(invoice.period_start)} to ${formatUKDate(invoice.period_end)})`,
+            amount: invoice.amount_pence,
+          },
+        ];
+
   y -= 32;
   page.drawRectangle({ x: 48, y: y - 6, width: 499, height: 22, color: cream });
   page.drawText("Description", { x: 56, y, size: 9, font: sansBold, color: muted });
   page.drawText("Amount", { x: 490, y, size: 9, font: sansBold, color: muted });
   y -= 28;
-  page.drawText(
-    `Lock-up garage, unit ${invoice.unit_label} — ${periodLabel(invoice.period_start)} (${formatUKDate(invoice.period_start)} to ${formatUKDate(invoice.period_end)})`,
-    { x: 56, y, size: 10, font: sans, color: ink },
-  );
-  page.drawText(formatGBP(invoice.amount_pence), {
-    x: 480,
-    y,
-    size: 10,
-    font: sansBold,
-    color: ink,
-  });
-  y -= 16;
+  for (const item of lines) {
+    page.drawText(item.description, { x: 56, y, size: 9, font: sans, color: ink });
+    page.drawText(formatGBP(item.amount), {
+      x: 480,
+      y,
+      size: 10,
+      font: sansBold,
+      color: ink,
+    });
+    y -= 18;
+  }
   page.drawLine({
     start: { x: 48, y },
     end: { x: 547, y },
@@ -173,15 +200,15 @@ export async function writeInvoicePdf(
     color: ink,
   });
 
-  if (config.sortCode && config.accountNumber) {
-    page.drawText(`Sort code  ${config.sortCode}`, {
+  if (sortCode && accountNumber) {
+    page.drawText(`Sort code  ${sortCode}`, {
       x: 60,
       y: y - 58,
       size: 10,
       font: sans,
       color: ink,
     });
-    page.drawText(`Account number  ${config.accountNumber}`, {
+    page.drawText(`Account number  ${accountNumber}`, {
       x: 60,
       y: y - 74,
       size: 10,

@@ -29,7 +29,9 @@ export default function InvoicesPage() {
       <div>
         <h1 className="text-3xl text-ink">Invoices</h1>
         <p className="text-sm text-muted-foreground">
-          Draft until emailed (or marked sent). Overdue means the due date has passed and it is not paid.
+          One invoice per tenant per landlord per month. Two of Jack’s garages is
+          one Jack invoice with two line items. One of Jack’s and one of David’s
+          is two invoices, emailed separately when that landlord’s from-email is set.
         </p>
       </div>
       {invoices.length === 0 ? (
@@ -42,6 +44,7 @@ export default function InvoicesPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Number</TableHead>
+                <TableHead>Landlord</TableHead>
                 <TableHead>Tenant</TableHead>
                 <TableHead>Reference</TableHead>
                 <TableHead>Status</TableHead>
@@ -62,7 +65,13 @@ export default function InvoicesPage() {
                         Sample
                       </Badge>
                     ) : null}
+                    {invoice.lines.length > 1 ? (
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        {invoice.lines.length} lines
+                      </span>
+                    ) : null}
                   </TableCell>
+                  <TableCell>{invoice.landlord_name || "—"}</TableCell>
                   <TableCell>{invoice.tenant_name}</TableCell>
                   <TableCell className="font-mono text-xs">{invoice.payment_reference}</TableCell>
                   <TableCell>{statusLabel[invoice.status] ?? invoice.status}</TableCell>

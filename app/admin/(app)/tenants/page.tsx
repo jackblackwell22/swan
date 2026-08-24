@@ -23,7 +23,8 @@ export default function TenantsPage() {
         <div>
           <h1 className="text-3xl text-ink">Tenants</h1>
           <p className="text-sm text-muted-foreground">
-            Names, emails and the unit label you use (1, 2, A — whatever you write on the door).
+            People or businesses renting one or more of lock-ups 7–12. A garage
+            can only be let to one active tenant at a time.
           </p>
         </div>
         <Button render={<Link href="/admin/tenants/new" />}>Add tenant</Button>
@@ -38,7 +39,7 @@ export default function TenantsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
-                <TableHead>Unit</TableHead>
+                <TableHead>Garages</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Rent</TableHead>
                 <TableHead>Status</TableHead>

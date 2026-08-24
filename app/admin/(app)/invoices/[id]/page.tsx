@@ -4,7 +4,15 @@ import { Badge } from "@/components/ui/badge";
 import { getInvoice } from "@/lib/db";
 import { formatGBP, formatUKDate, periodLabel } from "@/lib/format";
 import { InvoiceActions } from "@/components/admin/invoice-actions";
-import { getBusinessConfig, hasBankDetails, isSmtpConfigured } from "@/lib/config";
+import {
+  canEmailAsLandlord,
+  getBusinessConfig,
+  getLandlordConfig,
+  isLandlordId,
+  isSmtpHostConfigured,
+  landlordEnvPrefix,
+  landlordHasBankDetails,
+} from "@/lib/config";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +25,16 @@ export default async function InvoiceDetailPage({
   const invoice = getInvoice(Number(id));
   if (!invoice) notFound();
   const config = getBusinessConfig();
+  const landlord = isLandlordId(invoice.landlord_id)
+    ? getLandlordConfig(invoice.landlord_id)
+    : null;
+  const fromName = landlord?.name || invoice.landlord_name || config.name;
+  const canEmail = landlord ? canEmailAsLandlord(landlord.id) : false;
+  const hasBank = landlord ? landlordHasBankDetails(landlord.id) : false;
+  const garageLabel =
+    invoice.lines.length > 0
+      ? invoice.lines.map((line) => line.garage_number).join(", ")
+      : invoice.unit_label;
 
   return (
     <div className="space-y-6">
@@ -49,23 +67,23 @@ export default async function InvoiceDetailPage({
             <br />
             {invoice.tenant_email}
             <br />
-            Unit {invoice.unit_label}
+            Garage{invoice.lines.length === 1 ? "" : "s"} {garageLabel}
           </dd>
         </div>
         <div>
           <dt className="text-muted-foreground">From</dt>
           <dd className="mt-1">
-            {config.name}
+            {fromName}
             {config.address ? (
               <>
                 <br />
                 {config.address}
               </>
             ) : null}
-            {config.email ? (
+            {landlord?.fromEmail ? (
               <>
                 <br />
-                {config.email}
+                {landlord.fromEmail}
               </>
             ) : null}
           </dd>
@@ -93,23 +111,49 @@ export default async function InvoiceDetailPage({
           </dd>
         </div>
         <div className="sm:col-span-2">
+          <dt className="text-muted-foreground">Line items</dt>
+          <dd className="mt-1">
+            {invoice.lines.length === 0 ? (
+              formatGBP(invoice.amount_pence)
+            ) : (
+              <ul className="space-y-1">
+                {invoice.lines.map((line) => (
+                  <li key={line.id}>
+                    Garage {line.garage_number} · {formatGBP(line.amount_pence)}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </dd>
+        </div>
+        <div className="sm:col-span-2">
           <dt className="text-muted-foreground">BACS</dt>
           <dd className="mt-1 font-mono">{invoice.payment_reference}</dd>
-          {hasBankDetails(config) ? (
+          <dd className="mt-1 text-muted-foreground">
+            Scheme: SWAN-J or SWAN-D, then the garage numbers on this invoice, then the
+            month. Matching on a bank CSV still uses this reference first.
+          </dd>
+          {hasBank && landlord ? (
             <dd className="mt-1">
-              Sort code {config.sortCode} · Account {config.accountNumber}
+              Sort code {landlord.sortCode} · Account {landlord.accountNumber}
             </dd>
           ) : (
             <dd className="mt-1 text-muted-foreground">
-              Bank details are not in the configuration file, so they are omitted from the PDF.
+              Bank details for this landlord are not in the configuration file, so they
+              are omitted from the PDF.
             </dd>
           )}
         </div>
       </dl>
-      {!isSmtpConfigured() ? (
+      {!isSmtpHostConfigured() ? (
         <p className="text-sm text-muted-foreground">
-          Email is not set up, so “Email” will explain that. Download the PDF and send it from
-          your own mailbox if you need to.
+          SMTP is not set up, so “Email” will explain that. Download the PDF and send it
+          from your own mailbox if you need to.
+        </p>
+      ) : landlord && !canEmail ? (
+        <p className="text-sm text-muted-foreground">
+          Email is not set up for {landlord.name}. Fill in {landlordEnvPrefix(landlord.id)}
+          _FROM_EMAIL. The PDF is still ready.
         </p>
       ) : null}
     </div>

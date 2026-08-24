@@ -60,11 +60,11 @@ export default function GaragesPage() {
         <div>
           <h2 className="text-2xl text-ink">How they are used</h2>
           <p className="mt-4 text-base leading-relaxed text-ink/80">
-            Tenants use the units in the ordinary way: a vehicle, storage for a
-            small business, or private lock-up space. We do not publish unit
-            sizes, a count of vacancies, or a rent list on this website, because
-            those figures change and we would rather tell you plainly when you
-            enquire.
+            There are six lock-ups, numbered 7, 8, 9, 10, 11 and 12. Tenants use
+            them in the ordinary way: a vehicle, storage for a small business, or
+            private lock-up space. We do not publish a count of vacancies, or a
+            rent list on this website, because those figures change and we would
+            rather tell you plainly when you enquire.
           </p>
           <p className="mt-4 text-base leading-relaxed text-ink/80">
             The photograph shows a short row of units on the street. That is
