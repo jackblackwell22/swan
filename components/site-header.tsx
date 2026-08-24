@@ -6,17 +6,27 @@ import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const links = [
+const alwaysLinks = [
   { href: "/", label: "Home" },
   { href: "/the-garages", label: "The garages" },
   { href: "/location", label: "Location" },
-  { href: "/enquire", label: "Enquire" },
-  { href: "/for-tenants", label: "For tenants" },
-];
+] as const;
 
-export function SiteHeader({ businessName }: { businessName: string }) {
+const tenantLink = { href: "/for-tenants", label: "For tenants" } as const;
+const enquireLink = { href: "/enquire", label: "Enquire" } as const;
+
+export function SiteHeader({
+  businessName,
+  acceptingEnquiries,
+}: {
+  businessName: string;
+  acceptingEnquiries: boolean;
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const links = acceptingEnquiries
+    ? [...alwaysLinks, enquireLink, tenantLink]
+    : [...alwaysLinks, tenantLink];
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/80 bg-cream/90 backdrop-blur-md">

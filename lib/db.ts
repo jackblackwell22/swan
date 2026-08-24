@@ -240,6 +240,11 @@ function migrate(db: Database.Database) {
       address TEXT
     );
 
+    CREATE TABLE IF NOT EXISTS site_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
+
     CREATE INDEX IF NOT EXISTS idx_invoices_tenant ON invoices(tenant_id);
     CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
     CREATE INDEX IF NOT EXISTS idx_invoices_period ON invoices(period_start);
@@ -257,6 +262,7 @@ function migrate(db: Database.Database) {
   `);
   seedGarages(db);
   seedLandlords(db);
+  seedSiteSettings(db);
 }
 
 function addColumnIfMissing(
@@ -285,6 +291,29 @@ function seedLandlords(db: Database.Database) {
   for (const id of LANDLORD_IDS) {
     insert.run(id);
   }
+}
+
+function seedSiteSettings(db: Database.Database) {
+  db.prepare(
+    "INSERT OR IGNORE INTO site_settings (key, value) VALUES ('accepting_enquiries', '1')",
+  ).run();
+}
+
+export function isAcceptingEnquiries(): boolean {
+  const row = getDb()
+    .prepare("SELECT value FROM site_settings WHERE key = ?")
+    .get("accepting_enquiries") as { value: string } | undefined;
+  if (!row) return true;
+  return row.value !== "0";
+}
+
+export function setAcceptingEnquiries(accepting: boolean) {
+  getDb()
+    .prepare(
+      `INSERT INTO site_settings (key, value) VALUES ('accepting_enquiries', ?)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+    )
+    .run(accepting ? "1" : "0");
 }
 
 function adminFingerprint(): string {
@@ -930,6 +959,9 @@ export function insertEnquiry(input: {
   use_type: string;
   message: string;
 }): Enquiry {
+  if (!isAcceptingEnquiries()) {
+    throw new Error("The lock-ups are currently all let.");
+  }
   const result = getDb()
     .prepare(
       `INSERT INTO enquiries (name, email, phone, tenant_kind, use_type, message, created_at)

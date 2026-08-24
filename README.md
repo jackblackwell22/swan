@@ -13,7 +13,7 @@ This guide is written for the two of you, not for a developer.
 - **Home, The garages, Location, Enquire, For tenants, Privacy**
 - The photograph on the site is of the lock-ups (blue wooden doors and brick). The file is `public/images/lock-ups.jpg` — replace it with your own original if you prefer, keeping the same name.
 - The map is OpenStreetMap of Swan Street. It pins the street, not a made-up unit number.
-- The enquiry form stores messages for you. If email is set up, a copy also goes to your mailbox.
+- The enquiry form stores messages for you. If email is set up, a copy also goes to your mailbox. You can turn the public form off from the owners’ desk (**Accepting enquiries**) when the lock-ups are all let.
 - Empty contact fields stay hidden. Do not invent a phone number, email or price to “fill the gap” — leave those lines blank until they are real.
 
 The owners’ desk is at `/admin` (a very small “Owners” link sits at the foot of the public site). It is not in the main menu.
@@ -93,7 +93,7 @@ There is no company number, VAT number or bank account invented for you. Add tho
 
 Sign in at `/admin`.
 
-1. **Garages** — the six lock-ups are numbered **7, 8, 9, 10, 11, 12**. For each one, choose Jack Blackwell or David Blackwell. Leave it unset until you know; the desk will not guess. Each landlord has a postal address and BACS fields (account name, sort code, account number) here; they print on their invoices and stay hidden if blank.
+1. **Garages** — the six lock-ups are numbered **7, 8, 9, 10, 11, 12**. For each one, choose Jack Blackwell or David Blackwell. Leave it unset until you know; the desk will not guess. Each landlord has a postal address and BACS fields (account name, sort code, account number) here; they print on their invoices and stay hidden if blank. **Accepting enquiries** (also on This month) turns the public enquiry form on or off. Off means the site says the lock-ups are all let, and nobody can send a new enquiry.
 2. **Tenants** — name, email, which of 7–12 they rent (one or more), rent **per garage**, business or private, active or ended. A garage can only be let to one active tenant at a time.
 3. **This month** — “Create this month’s invoices” makes PDFs for every **active** tenant. One invoice per tenant per landlord per month: two of Jack’s units is one Jack invoice with two line items; one of Jack’s and one of David’s is two invoices. You can also invoice one tenant from their page.
 4. **Invoices** — download the PDF, email it (if that landlord’s from-email and SMTP are filled in), or resend. If a landlord’s email is not set, the PDF still generates and the desk says email is not set up for them. Tenants pay that landlord by BACS using the account on the PDF.

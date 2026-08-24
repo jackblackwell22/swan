@@ -10,11 +10,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { listEnquiries, listGarages, listInvoices, monthStats } from "@/lib/db";
+import { listEnquiries, listGarages, listInvoices, monthStats, isAcceptingEnquiries } from "@/lib/db";
 import { formatGBP, formatUKDate, londonDateISO, periodLabel } from "@/lib/format";
 import { currentPeriodStart } from "@/lib/invoicing";
 import { RunJobsButtons } from "@/components/admin/run-jobs-buttons";
 import { InvoiceActions } from "@/components/admin/invoice-actions";
+import { AcceptingEnquiriesToggle } from "@/components/admin/accepting-enquiries-toggle";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,7 @@ export default function AdminHomePage() {
   const recentEnquiries = listEnquiries().slice(0, 5);
   const today = londonDateISO();
   const unownedGarages = listGarages().filter((garage) => !garage.landlord_id);
+  const acceptingEnquiries = isAcceptingEnquiries();
 
   return (
     <div className="space-y-8">
@@ -41,6 +43,8 @@ export default function AdminHomePage() {
         </div>
         <RunJobsButtons />
       </div>
+
+      <AcceptingEnquiriesToggle accepting={acceptingEnquiries} />
 
       {unownedGarages.length > 0 ? (
         <p className="rounded-lg bg-white p-4 text-sm text-muted-foreground ring-1 ring-border">

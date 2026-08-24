@@ -10,6 +10,7 @@ import {
   getInvoice,
   getTenant,
   markInvoiceSent,
+  setAcceptingEnquiries,
   setGarageLandlord,
   setLandlordDetails,
   updateTenant,
@@ -23,6 +24,24 @@ function revalidateAdmin() {
   revalidatePath("/admin/tenants");
   revalidatePath("/admin/invoices");
   revalidatePath("/admin/garages");
+  revalidatePath("/admin/enquiries");
+}
+
+function revalidatePublic() {
+  revalidatePath("/", "layout");
+  revalidatePath("/");
+  revalidatePath("/enquire");
+  revalidatePath("/the-garages");
+  revalidatePath("/for-tenants");
+  revalidatePath("/privacy");
+  revalidatePath("/location");
+}
+
+export async function setAcceptingEnquiriesAction(accepting: boolean) {
+  await requireAdmin();
+  setAcceptingEnquiries(accepting);
+  revalidateAdmin();
+  revalidatePublic();
 }
 
 const tenantSchema = z.object({

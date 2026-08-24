@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getBusinessConfig } from "@/lib/config";
+import { isAcceptingEnquiries } from "@/lib/db";
 
 export const metadata: Metadata = {
   title: "Privacy",
@@ -8,6 +9,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   const config = getBusinessConfig();
+  const accepting = isAcceptingEnquiries();
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
@@ -30,7 +32,7 @@ export default function PrivacyPage() {
             </a>
             .
           </>
-        ) : (
+        ) : accepting ? (
           <>
             {" "}
             You can write to us using the{" "}
@@ -39,7 +41,7 @@ export default function PrivacyPage() {
             </Link>
             .
           </>
-        )}
+        ) : null}
       </p>
 
       <h2 className="mt-10 text-2xl text-ink">What we keep</h2>

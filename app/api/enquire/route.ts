@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getBusinessConfig } from "@/lib/config";
-import { insertEnquiry, recentFailedLogins, recordLoginAttempt } from "@/lib/db";
+import { ALL_LET_BODY } from "@/lib/enquiries";
+import { insertEnquiry, isAcceptingEnquiries, recentFailedLogins, recordLoginAttempt } from "@/lib/db";
 import { isSmtpConfigured, sendEnquiryNotification } from "@/lib/email";
 
 const schema = z.object({
@@ -15,6 +16,10 @@ const schema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  if (!isAcceptingEnquiries()) {
+    return NextResponse.json({ error: ALL_LET_BODY }, { status: 403 });
+  }
+
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
   const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
   if (recentFailedLogins(`enquire:${ip}`, since) >= 8) {

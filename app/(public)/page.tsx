@@ -2,9 +2,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { getBusinessConfig } from "@/lib/config";
+import { isAcceptingEnquiries } from "@/lib/db";
+import { ALL_LET_BODY } from "@/lib/enquiries";
 
 export default function HomePage() {
   const config = getBusinessConfig();
+  const accepting = isAcceptingEnquiries();
 
   return (
     <>
@@ -30,13 +33,19 @@ export default function HomePage() {
             private tenants. Father and son, on a quiet street in the spa town.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Button
-              render={<Link href="/enquire" />}
-              size="lg"
-              className="h-11 px-5 text-base"
-            >
-              Enquire about a unit
-            </Button>
+            {accepting ? (
+              <Button
+                render={<Link href="/enquire" />}
+                size="lg"
+                className="h-11 px-5 text-base"
+              >
+                Enquire about a unit
+              </Button>
+            ) : (
+              <p className="max-w-xl rounded-md bg-white/15 px-4 py-3 text-sm text-white/95 ring-1 ring-white/20">
+                {ALL_LET_BODY}
+              </p>
+            )}
             <Button
               render={<Link href="/the-garages" />}
               size="lg"
@@ -67,7 +76,10 @@ export default function HomePage() {
             We let to a mix of local businesses and private tenants — a van
             kept off the street, stock for a shop, or simply somewhere dry to
             keep belongings. Availability and rent change as tenancies come and
-            go, so please enquire rather than looking for a price list here.
+            go
+            {accepting
+              ? ", so please enquire rather than looking for a price list here."
+              : ". We do not publish a price list here."}
           </p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -106,8 +118,10 @@ export default function HomePage() {
             <h3 className="text-xl text-ink">For private tenants</h3>
             <p className="mt-2 text-sm leading-relaxed text-ink/75">
               Vehicle storage or general lock-up use, by arrangement. We do not
-              publish a waiting list online; write to us and we will tell you
-              what is available.
+              publish a waiting list online
+              {accepting
+                ? "; write to us and we will tell you what is available."
+                : "."}
             </p>
           </div>
           <div>
@@ -122,18 +136,27 @@ export default function HomePage() {
       </section>
 
       <section className="mx-auto max-w-3xl px-4 py-16 text-center sm:px-6">
-        <h2 className="text-3xl text-ink">If you need a unit</h2>
-        <p className="mt-3 text-base text-ink/80">
-          Tell us a little about yourself and what you would use the garage
-          for. We will come back to you about availability and rent.
-        </p>
-        <Button
-          render={<Link href="/enquire" />}
-          size="lg"
-          className="mt-6 h-11 px-6 text-base"
-        >
-          Send an enquiry
-        </Button>
+        {accepting ? (
+          <>
+            <h2 className="text-3xl text-ink">If you need a unit</h2>
+            <p className="mt-3 text-base text-ink/80">
+              Tell us a little about yourself and what you would use the garage
+              for. We will come back to you about availability and rent.
+            </p>
+            <Button
+              render={<Link href="/enquire" />}
+              size="lg"
+              className="mt-6 h-11 px-6 text-base"
+            >
+              Send an enquiry
+            </Button>
+          </>
+        ) : (
+          <>
+            <h2 className="text-3xl text-ink">If you need a unit</h2>
+            <p className="mt-3 text-base text-ink/80">{ALL_LET_BODY}</p>
+          </>
+        )}
       </section>
     </>
   );

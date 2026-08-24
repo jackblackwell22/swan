@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getBusinessConfig } from "@/lib/config";
-import { getResolvedLandlord } from "@/lib/db";
+import { getResolvedLandlord, isAcceptingEnquiries } from "@/lib/db";
 import { LANDLORD_IDS, bacsLines } from "@/lib/landlords";
 
 export const metadata: Metadata = {
@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 
 export default function ForTenantsPage() {
   const config = getBusinessConfig();
+  const accepting = isAcceptingEnquiries();
   const landlords = LANDLORD_IDS.map(getResolvedLandlord).filter(
     (landlord) => bacsLines(landlord).length > 0,
   );
@@ -128,13 +129,18 @@ export default function ForTenantsPage() {
               ) : null}
               {config.email && config.phone ? ", or telephone " : null}
               {config.phone && !config.email ? "Telephone " : null}
-              {config.phone ? config.phone : null}. You can also use the{" "}
-              <Link href="/enquire" className="text-door underline-offset-2 hover:underline">
-                enquiry form
-              </Link>
+              {config.phone ? config.phone : null}
+              {accepting ? (
+                <>
+                  . You can also use the{" "}
+                  <Link href="/enquire" className="text-door underline-offset-2 hover:underline">
+                    enquiry form
+                  </Link>
+                </>
+              ) : null}
               .
             </>
-          ) : (
+          ) : accepting ? (
             <>
               Use the{" "}
               <Link href="/enquire" className="text-door underline-offset-2 hover:underline">
@@ -142,6 +148,12 @@ export default function ForTenantsPage() {
               </Link>{" "}
               and we will reply from the address we have on file for you, or
               with a new message if you are not yet a tenant.
+            </>
+          ) : (
+            <>
+              If you already rent a unit, we will use the email we have on file
+              for you. The public enquiry form is closed while the lock-ups are
+              all let.
             </>
           )}
         </p>

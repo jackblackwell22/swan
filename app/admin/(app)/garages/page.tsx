@@ -1,6 +1,7 @@
 import { GarageLandlordForm } from "@/components/admin/garage-landlord-form";
 import { LandlordAddressForm } from "@/components/admin/landlord-address-form";
-import { getResolvedLandlord, listGarages } from "@/lib/db";
+import { AcceptingEnquiriesToggle } from "@/components/admin/accepting-enquiries-toggle";
+import { getResolvedLandlord, isAcceptingEnquiries, listGarages } from "@/lib/db";
 import { LANDLORD_IDS } from "@/lib/landlords";
 
 export const dynamic = "force-dynamic";
@@ -8,6 +9,7 @@ export const dynamic = "force-dynamic";
 export default function GaragesAdminPage() {
   const garages = listGarages();
   const landlords = LANDLORD_IDS.map(getResolvedLandlord);
+  const acceptingEnquiries = isAcceptingEnquiries();
 
   return (
     <div className="space-y-6">
@@ -19,6 +21,7 @@ export default function GaragesAdminPage() {
           whose it is — the desk will not guess.
         </p>
       </div>
+      <AcceptingEnquiriesToggle accepting={acceptingEnquiries} />
       <GarageLandlordForm garages={garages} />
       <LandlordAddressForm landlords={landlords} />
       <section className="max-w-2xl space-y-2 rounded-xl bg-white p-5 text-sm ring-1 ring-border">

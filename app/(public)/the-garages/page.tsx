@@ -2,12 +2,15 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { isAcceptingEnquiries } from "@/lib/db";
+import { ALL_LET_BODY } from "@/lib/enquiries";
 
 export const metadata: Metadata = {
   title: "The garages",
 };
 
 export default function GaragesPage() {
+  const accepting = isAcceptingEnquiries();
   return (
     <article className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
       <p className="text-xs font-medium tracking-[0.18em] text-brick uppercase">
@@ -63,8 +66,10 @@ export default function GaragesPage() {
             There are six lock-ups, numbered 7, 8, 9, 10, 11 and 12. Tenants use
             them in the ordinary way: a vehicle, storage for a small business, or
             private lock-up space. We do not publish a count of vacancies, or a
-            rent list on this website, because those figures change and we would
-            rather tell you plainly when you enquire.
+            rent list on this website, because those figures change
+            {accepting
+              ? " and we would rather tell you plainly when you enquire."
+              : "."}
           </p>
           <p className="mt-4 text-base leading-relaxed text-ink/80">
             The photograph shows a short row of units on the street. That is
@@ -107,13 +112,15 @@ export default function GaragesPage() {
       <div className="mt-12 rounded-xl bg-white/70 p-6 ring-1 ring-border sm:p-8">
         <h2 className="text-2xl text-ink">Availability and rent</h2>
         <p className="mt-3 max-w-2xl text-base text-ink/80">
-          If a unit is free, or likely to become free, we will say so when we
-          reply. Rent is agreed with you directly. Nothing on this site should
-          be read as an offer of a particular unit or a particular figure.
+          {accepting
+            ? "If a unit is free, or likely to become free, we will say so when we reply. Rent is agreed with you directly. Nothing on this site should be read as an offer of a particular unit or a particular figure."
+            : ALL_LET_BODY}
         </p>
-        <Button render={<Link href="/enquire" />} className="mt-5 h-10 px-4">
-          Enquire
-        </Button>
+        {accepting ? (
+          <Button render={<Link href="/enquire" />} className="mt-5 h-10 px-4">
+            Enquire
+          </Button>
+        ) : null}
       </div>
     </article>
   );

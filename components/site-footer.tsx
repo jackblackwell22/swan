@@ -1,7 +1,14 @@
 import Link from "next/link";
 import type { BusinessConfig } from "@/lib/config";
+import { ALL_LET_BODY } from "@/lib/enquiries";
 
-export function SiteFooter({ config }: { config: BusinessConfig }) {
+export function SiteFooter({
+  config,
+  acceptingEnquiries,
+}: {
+  config: BusinessConfig;
+  acceptingEnquiries: boolean;
+}) {
   const contacts = [config.email, config.phone].filter(Boolean);
 
   return (
@@ -37,34 +44,45 @@ export function SiteFooter({ config }: { config: BusinessConfig }) {
           ) : null}
         </div>
         <div>
-          <p className="text-xs font-medium tracking-wide text-brick uppercase">
-            Get in touch
-          </p>
-          {contacts.length > 0 ? (
-            <ul className="mt-2 space-y-1 text-sm">
-              {config.email ? (
-                <li>
-                  <a className="text-door underline-offset-2 hover:underline" href={`mailto:${config.email}`}>
-                    {config.email}
-                  </a>
-                </li>
-              ) : null}
-              {config.phone ? (
-                <li>
-                  <a className="text-door underline-offset-2 hover:underline" href={`tel:${config.phone.replace(/\s+/g, "")}`}>
-                    {config.phone}
-                  </a>
-                </li>
-              ) : null}
-            </ul>
+          {acceptingEnquiries || contacts.length > 0 ? (
+            <>
+              <p className="text-xs font-medium tracking-wide text-brick uppercase">
+                Get in touch
+              </p>
+              {contacts.length > 0 ? (
+                <ul className="mt-2 space-y-1 text-sm">
+                  {config.email ? (
+                    <li>
+                      <a className="text-door underline-offset-2 hover:underline" href={`mailto:${config.email}`}>
+                        {config.email}
+                      </a>
+                    </li>
+                  ) : null}
+                  {config.phone ? (
+                    <li>
+                      <a className="text-door underline-offset-2 hover:underline" href={`tel:${config.phone.replace(/\s+/g, "")}`}>
+                        {config.phone}
+                      </a>
+                    </li>
+                  ) : null}
+                </ul>
+              ) : (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Use the{" "}
+                  <Link href="/enquire" className="text-door underline-offset-2 hover:underline">
+                    enquiry form
+                  </Link>{" "}
+                  and we will come back to you.
+                </p>
+              )}
+            </>
           ) : (
-            <p className="mt-2 text-sm text-muted-foreground">
-              Use the{" "}
-              <Link href="/enquire" className="text-door underline-offset-2 hover:underline">
-                enquiry form
-              </Link>{" "}
-              and we will come back to you.
-            </p>
+            <>
+              <p className="text-xs font-medium tracking-wide text-brick uppercase">
+                Availability
+              </p>
+              <p className="mt-2 text-sm text-muted-foreground">{ALL_LET_BODY}</p>
+            </>
           )}
           <p className="mt-4 text-sm">
             <Link href="/privacy" className="text-muted-foreground underline-offset-2 hover:underline">
