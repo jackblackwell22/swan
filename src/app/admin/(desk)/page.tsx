@@ -5,14 +5,18 @@ import { londonParts, monthLabel } from "@/lib/london";
 import { formatGBP } from "@/lib/money";
 import { listGarages, listInvoices } from "@/lib/queries";
 import { isAcceptingEnquiries } from "@/lib/settings";
-import { generateThisMonthAction, saveAcceptingAction } from "../actions";
+import {
+  generateThisMonthAction,
+  resendInvoiceAction,
+  saveAcceptingAction,
+} from "../actions";
 
 export const metadata = { title: "This month" };
 
 export default async function ThisMonthPage({
   searchParams,
 }: {
-  searchParams: Promise<{ generated?: string }>;
+  searchParams: Promise<{ generated?: string; resent?: string }>;
 }) {
   await requireOwner();
   const params = await searchParams;
@@ -34,6 +38,12 @@ export default async function ThisMonthPage({
         <p className="mt-4 rounded-md border border-line bg-paper px-4 py-3 text-sm">
           This month’s invoices have been prepared. Existing ones were left as
           they were.
+        </p>
+      ) : null}
+      {params.resent ? (
+        <p className="mt-4 rounded-md border border-line bg-paper px-4 py-3 text-sm">
+          Email was attempted for that invoice. If it failed, the reason is on
+          the Invoices page.
         </p>
       ) : null}
 
@@ -129,12 +139,24 @@ export default async function ThisMonthPage({
                     {formatGBP(invoice.total_pence)}
                   </p>
                 </div>
-                <a
-                  href={`/admin/invoices/${invoice.id}/pdf`}
-                  className="text-sm font-semibold text-door hover:underline"
-                >
-                  Download PDF
-                </a>
+                <div className="flex flex-wrap items-center gap-4">
+                  <a
+                    href={`/admin/invoices/${invoice.id}/pdf`}
+                    className="text-sm font-semibold text-door hover:underline"
+                  >
+                    Download PDF
+                  </a>
+                  <form action={resendInvoiceAction}>
+                    <input type="hidden" name="id" value={invoice.id} />
+                    <input type="hidden" name="from" value="this-month" />
+                    <button
+                      type="submit"
+                      className="text-sm font-semibold text-door hover:underline"
+                    >
+                      Resend
+                    </button>
+                  </form>
+                </div>
               </li>
             ))}
           </ul>
