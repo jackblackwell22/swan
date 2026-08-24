@@ -1,0 +1,2 @@
+# This folder holds the SQLite database and generated invoice PDFs.
+# Those files stay on this computer (or your hosting box) and are not published with the website code.

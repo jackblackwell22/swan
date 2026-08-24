@@ -1,153 +1,207 @@
 # Swan Street Lock-Ups
 
-A website for the family lock-up garages on **Swan Street, Royal Leamington Spa**.
+A small website for the lock-up garages on Swan Street, Royal Leamington Spa, plus a private owners’ desk for tenants, invoices and rent.
 
-Jack Blackwell and David Blackwell let units **7, 8, 9, 10, 11 and 12**. This site is the public pages plus a private “owners’ desk” where you record who rents what and print monthly invoices.
+You do **not** need Stripe, GoCardless, or a paid email company. The site uses a file on the computer (SQLite) and, when you are ready, the ordinary mailbox that comes with your domain.
 
-You do **not** need Stripe, GoCardless, or any paid internet service. The only costs you should need are a domain name and a computer (or hosting company) that can run a Node.js website.
-
----
-
-## What you need on a computer
-
-1. [Node.js](https://nodejs.org/) version 20 or newer (the LTS button on that page is fine).
-2. This project folder.
-
-On Windows, Mac, or Linux, open a terminal in this folder and run:
-
-```bash
-npm install
-```
-
-That only needs doing when you first copy the project, or when someone has added new packages.
+This guide is written for the two of you, not for a developer.
 
 ---
 
-## The secret settings file
+## What the public site does
 
-Copy the example file and fill it in. **Never put this filled-in file on GitHub.**
+- **Home, The garages, Location, Enquire, For tenants, Privacy**
+- The photograph on the site is of the lock-ups (blue wooden doors and brick). The file is `public/images/lock-ups.jpg` — replace it with your own original if you prefer, keeping the same name.
+- The map is OpenStreetMap of Swan Street. It pins the street, not a made-up unit number.
+- The enquiry form stores messages for you. If email is set up, a copy also goes to your mailbox. You can turn the public form off from the owners’ desk (**Accepting enquiries**) when the lock-ups are all let.
+- Empty contact fields stay hidden. Do not invent a phone number, email or price to “fill the gap” — leave those lines blank until they are real.
 
-```bash
-cp .env.example .env.local
-```
+The owners’ desk is at `/admin` (a very small “Owners” link sits at the foot of the public site). It is not in the main menu.
 
-Then open `.env.local` in a text editor.
+---
 
-| Name | What it is |
+## Run it on this computer (to try it)
+
+You need [Node.js](https://nodejs.org) 20 or newer (the LTS version is fine).
+
+1. Copy the project onto the computer.
+2. Open a terminal in this folder.
+3. Copy the example settings:
+
+   **On a Mac or Linux**
+
+   ```bash
+   cp .env.example .env.local
+   ```
+
+   **On Windows (Command Prompt)**
+
+   ```bat
+   copy .env.example .env.local
+   ```
+
+4. Open `.env.local` in Notepad (or TextEdit) and change the two owner emails and passwords. Leave phone, email and bank lines blank if you do not want them on the website yet.
+5. Install and start:
+
+   ```bash
+   npm install
+   npm run dev
+   ```
+
+6. In a browser open [http://127.0.0.1:43141](http://127.0.0.1:43141).
+
+Owners’ desk: [http://127.0.0.1:43141/admin/login](http://127.0.0.1:43141/admin/login)
+
+On this trial copy, sign in with email and password only (no authenticator app):
+
+- `dad@example.com` / `change-me-dad`
+- `son@example.com` / `change-me-son`
+
+Two-factor is off until you choose to turn it on by setting `ADMIN1_TOTP_SECRET` or `ADMIN2_TOTP_SECRET` in `.env.local`.
+
+---
+
+## What to fill in (`.env.local`)
+
+Anything left blank is **hidden**. That is deliberate.
+
+| Setting | What it is |
 | --- | --- |
-| `JACK_USERNAME` / `JACK_PASSWORD` | Jack’s login for the owners’ desk |
-| `DAVID_USERNAME` / `DAVID_PASSWORD` | David’s login |
-| `SESSION_SECRET` | A long random string (any 32+ characters) so the site can keep you signed in |
-| `CRON_SECRET` | A different long random string. Needed for the monthly invoice web address |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | Optional. Your mailbox’s outgoing mail settings, if you want invoices emailed. Leave blank to still make PDFs without sending mail. |
-| `DATABASE_PATH` | Optional. Full path to the database file. If blank, the site uses `data/swan.sqlite` |
+| `BUSINESS_NAME` | Usually “Swan Street Lock-Ups” |
+| `BUSINESS_ADDRESS` | Correspondence on the public site only, if you want it shown. Not used as a landlord invoice address. |
+| `JACK_ADDRESS` / `DAVID_ADDRESS` | Postal address on that landlord’s invoices (one line per line, or `\n`). Leave blank until real. You can also set this on the Garages page. |
+| `BUSINESS_EMAIL` | Your real mailbox, once you have one |
+| `BUSINESS_PHONE` | Your real telephone, or blank |
+| `VAT_REGISTERED` | `true` only if you are VAT registered |
+| `VAT_NUMBER` | Only if you want it on invoices |
+| `JACK_FROM_EMAIL` / `DAVID_FROM_EMAIL` | From address on that landlord’s invoices. Leave blank until real — PDFs still generate. |
+| `JACK_BANK_ACCOUNT_NAME` / `JACK_BANK_SORT_CODE` / `JACK_BANK_ACCOUNT_NUMBER` | Jack’s BACS details, printed only when filled in. You can also set these on the Garages page. |
+| `DAVID_BANK_ACCOUNT_NAME` / `DAVID_BANK_SORT_CODE` / `DAVID_BANK_ACCOUNT_NUMBER` | David’s BACS details, printed only when filled in. |
+| `ADMIN1_EMAIL` / `ADMIN1_PASSWORD` | First owner. Trial: `dad@example.com` / `change-me-dad` |
+| `ADMIN2_EMAIL` / `ADMIN2_PASSWORD` | Second owner. Trial: `son@example.com` / `change-me-son` |
+| `SESSION_SECRET` | A long random sentence, at least 32 characters. Do not share it. |
+| `CRON_SECRET` | Another long random string, used if your host runs the monthly job by web address |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` | Shared mailbox for sending. Leave blank until it exists. |
+| `FROM_EMAIL` | From address for website enquiries only |
+| `SITE_URL` | `http://127.0.0.1:43141` while testing; later `https://your-domain` |
 
-Pick your own usernames and strong passwords. Do not reuse a banking password.
-
-On your own computer, if those owner logins are set, the login page also shows **Open the owners’ desk** — a one-click sign-in for convenience. That button is **not** shown on the live internet site.
+There is no company number, VAT number or bank account invented for you. Add those only when they are real.
 
 ---
 
-## Run it on your own computer
+## How the owners’ desk works
 
-```bash
-npm run dev
+Sign in at `/admin`.
+
+1. **Garages** — the six lock-ups are numbered **7, 8, 9, 10, 11, 12**. For each one, choose Jack Blackwell or David Blackwell. Leave it unset until you know; the desk will not guess. Each landlord has a postal address and BACS fields (account name, sort code, account number) here; they print on their invoices and stay hidden if blank. **Accepting enquiries** (also on This month) turns the public enquiry form on or off. Off means the site says the lock-ups are all let, and nobody can send a new enquiry.
+2. **Tenants** — name, email, which of 7–12 they rent (one or more), rent **per garage**, business or private, active or ended. A garage can only be let to one active tenant at a time.
+3. **This month** — “Create this month’s invoices” makes PDFs for every **active** tenant. One invoice per tenant per landlord per month: two of Jack’s units is one Jack invoice with two line items; one of Jack’s and one of David’s is two invoices. You can also invoice one tenant from their page.
+4. **Invoices** — download the PDF, email it (if that landlord’s from-email and SMTP are filled in), or resend. If a landlord’s email is not set, the PDF still generates and the desk says email is not set up for them. Tenants pay that landlord by BACS using the account on the PDF.
+
+Both of you use the same owners’ desk. Jack and David are the two landlords, not two separate apps.
+
+On a development computer the site includes a few tenants clearly named **EXAMPLE** / **sample data**. They are not real and are not created when the site runs in production.
+
+### Payment references
+
+Every invoice has a unique reference for the tenant to put on the bank transfer:
+
+`SWAN-{J or D}-{garage numbers}-{MON}{YY}`
+
+- **J** is Jack Blackwell, **D** is David Blackwell.
+- Garage numbers on that invoice are listed in order, hyphen-separated.
+
+Examples:
+
+- Jack, garages 7 and 8, September 2026 → `SWAN-J-7-8-SEP26`
+- David, garage 10, September 2026 → `SWAN-D-10-SEP26`
+
+Ask tenants to put that on the transfer in full, together with the BACS details printed on that landlord’s invoice.
+
+---
+
+## Email (the free mailbox that comes with your domain)
+
+When you buy a domain, the host almost always includes a mailbox. In `.env.local` (or the host’s “environment variables” screen) set:
+
+- `SMTP_HOST` — your host will tell you, often something like `mail.yourdomain.co.uk`
+- `SMTP_PORT` — usually `587` (or `465` with `SMTP_SECURE=true`)
+- `SMTP_USER` / `SMTP_PASS` — the mailbox login
+- `JACK_FROM_EMAIL` / `DAVID_FROM_EMAIL` — the From address on that landlord’s invoices (the shared SMTP host still sends them)
+- `FROM_EMAIL` — From address for website enquiry notifications
+
+Until SMTP is filled, invoices are still generated. They are just not emailed automatically. If SMTP is set but a landlord’s from-email is empty, that landlord’s PDFs still generate and the desk says email is not set up for them.
+
+---
+
+## The monthly job (1st of the month, UK time)
+
+On the 1st of the month at 08:05 Europe/London the running website creates invoices for active tenants and emails them if SMTP is set.
+
+If the computer is not running overnight, you can:
+
+- Click **Create this month’s invoices** on the owners’ desk, or
+- On the computer, in this folder:
+
+  ```bash
+  npm run job:monthly
+  ```
+
+- Or ask the host to call this address once a month (replace the secret):
+
+  `https://your-domain/api/jobs/monthly?secret=YOUR_CRON_SECRET`
+
+On a small always-on box (a cheap VPS, or a home computer that stays on), a crontab is enough:
+
+```
+5 8 1 * * cd /path/to/this/folder && /usr/bin/npm run job:monthly
 ```
 
-Then open [http://localhost:3000](http://localhost:3000) in a browser.
-
-The owners’ desk is [http://localhost:3000/admin/login](http://localhost:3000/admin/login).
-
-Stop it with `Ctrl+C` in the terminal.
-
-To check the public site will build (the same check a host should run):
-
-```bash
-npm run build
-```
-
 ---
 
-## First jobs in the owners’ desk
+## Going live (domain and hosting)
 
-1. **Garages** — for each of units 7–12, choose Jack, David, or Not set. Do not guess; leave “Not set” until you know.
-2. On the same page, fill **postal address** and **BACS** details for each landlord if you want them on invoices. Empty boxes stay empty on the PDF. There is also a **from-email** box for outgoing invoices, and **Accepting enquiries**.
-3. **Tenants** — add a person, tick the lock-ups they rent, and type the monthly rent for each. One lock-up cannot be let to two people at once.
-4. **This month** — when you are ready, **Create this month’s invoices**. You also get a PDF download later under **Invoices**. If outgoing email is not set, the page will say so; PDFs are still made.
+You only need:
 
-**Accepting enquiries** (on This month and on Garages) is on by default. Switch it off when everything is let: the public form disappears, Enquire links hide, and the site says the lock-ups are all let.
+1. A domain name (for example `swanstreetlockups.co.uk` — choose what you actually buy).
+2. Hosting that can run a Node.js app and keep a small file on disk (the database). A modest VPS is enough. Shared “static only” hosting will not run this.
 
-There is no “mark as paid”, no unpaid list, and no reminder emails. Payment is ordinary bank transfer using the reference on the PDF.
-
----
-
-## Monthly invoices (the 1st of the month)
-
-Invoices are grouped like this:
-
-- One invoice per tenant per landlord per month.
-- Two of Jack’s units → one Jack PDF with two lines.
-- One Jack unit and one David unit → two invoices.
-
-The payment reference looks like `SWAN-J-7-8-SEP26` (landlord initial, unit numbers, month and year).
-
-Two ways they get created:
-
-1. **If this website’s Node process stays running**, it will try at **08:05 UK time on the 1st** of each month (using `node-cron`).
-2. **A web address** any cheap “cron” service can call, even if the host only wakes up on request:
-
-   `GET` or `POST` `/api/jobs/monthly`
-
-   Protect it with `CRON_SECRET`. Any one of these works:
-
-   - Header `Authorization: Bearer YOUR_CRON_SECRET`
-   - Header `x-cron-secret: YOUR_CRON_SECRET`
-   - Query string `?secret=YOUR_CRON_SECRET` (easier for some free ping services; treat the secret like a password)
-
-If email (SMTP) is not set, PDFs are still saved and you can download them. The owners’ desk will say email is not configured.
-
----
-
-## Point a domain at the site
-
-Buy a domain (for example from your usual registrar). On their DNS screen:
-
-- If your host gives you an **IP address**, create an **A** record for `@` (and usually `www`) pointing at that IP.
-- If your host gives you a **hostname** (like `something.example.com`), create a **CNAME** for `www` (and follow their notes for the root `@` record).
-
-Ask the host to add your domain to the site and to issue a free HTTPS certificate (Let’s Encrypt is common). After DNS has updated (sometimes a few hours), `https://your-domain` should open this website.
-
----
-
-## Put it on the internet (not GitHub Pages)
-
-GitHub Pages can only show static files. This site needs **Node.js** and a **writable disk** for the SQLite database (`data/swan.sqlite`) and the PDF folder (`data/invoices/`). Use a small Node host or a Linux computer that stays on, for example:
-
-- A cheap virtual server (Hetzner, DigitalOcean, Linode, and similar)
-- A Node “web service” with a **persistent disk** (some platforms call this a volume)
-
-Typical commands on the server, after copying the project and setting the same environment names as `.env.example`:
+Typical steps on a small Linux server:
 
 ```bash
 npm install
+cp .env.example .env.local
+# edit .env.local — real emails, passwords, SESSION_SECRET, SITE_URL=https://your-domain
 npm run build
-npm run start
+npm start
 ```
 
-`npm run start` serves the built site. Put a reverse proxy (Caddy or Nginx) in front if you want HTTPS on port 443.
+Put **Nginx** or **Caddy** in front so the public address is HTTPS (your host often does this for you). Point the domain’s DNS A record at the server.
 
-Keep the `data` folder on the persistent disk and back it up. That folder holds tenants, enquiries, and invoices. It is not part of GitHub.
+Set `SITE_URL` to `https://your-domain` (no trailing slash).
 
-Set the environment variables in the host’s dashboard (or a `.env` file that is **not** committed). Restart after changing them.
-
-If the host **sleeps** when nobody visits, do not rely on the built-in 08:05 timer. Use a free monthly ping to `/api/jobs/monthly` with your `CRON_SECRET`.
+Keep a copy of the `data` folder somewhere safe. That folder is the tenants, invoices and enquiries. If the computer dies and you have no copy, that information is gone.
 
 ---
 
-## What is deliberately not here
+## Security (short version)
 
-- No card payments, Open Banking, or paid email APIs
-- No CCTV claims, prices, phone numbers, or company numbers on the public pages (those were not supplied)
-- Passwords, the database, PDFs, and `.env.local` stay off GitHub
+- Passwords are stored as hashes, not as the password itself.
+- The owners’ cookie is httpOnly. On a live HTTPS site it is also marked secure.
+- Login attempts are limited so a stranger cannot try passwords all day.
+- Tenant bank details are not stored.
+- Secrets belong in `.env.local` (or the host’s secret settings), not in the public pages.
 
-If you have a better photograph of the lock-ups, replace `public/images/swan-street-lock-ups.png` and keep the same file name.
+---
+
+## Commands at a glance
+
+| Command | What it does |
+| --- | --- |
+| `npm install` | Downloads the software (once) |
+| `npm run dev` | Trial copy on this computer, port 43141 |
+| `npm run build` | Prepares the live copy |
+| `npm start` | Runs the live copy |
+| `npm run job:monthly` | Create this month’s invoices now |
+
+The code lives in this project folder. You do not need GitHub to run it.
