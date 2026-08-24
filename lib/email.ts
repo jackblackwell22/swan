@@ -8,11 +8,10 @@ import {
   isSmtpConfigured,
   isSmtpHostConfigured,
   landlordEnvPrefix,
-  landlordHasBankDetails,
 } from "@/lib/config";
 import { getResolvedLandlord, type InvoiceWithTenant } from "@/lib/db";
 import { formatGBP, formatUKDate, periodLabel } from "@/lib/format";
-import { addressLines } from "@/lib/landlords";
+import { addressLines, bacsLines } from "@/lib/landlords";
 
 export { isSmtpConfigured, isSmtpHostConfigured };
 
@@ -63,11 +62,7 @@ function garagePhrase(invoice: InvoiceWithTenant): string {
   return `garages ${numbers.slice(0, -1).join(", ")} and ${numbers[numbers.length - 1]}`;
 }
 
-export async function sendInvoiceEmail(
-  invoice: InvoiceWithTenant,
-  pdfPath: string,
-  kind: "invoice" | "reminder" = "invoice",
-) {
+export async function sendInvoiceEmail(invoice: InvoiceWithTenant, pdfPath: string) {
   if (!isLandlordId(invoice.landlord_id)) {
     return {
       sent: false as const,
@@ -89,18 +84,9 @@ export async function sendInvoiceEmail(
     };
   }
 
-  const reminder =
-    kind === "reminder"
-      ? "This is a reminder that the invoice below is still unpaid.\n\n"
-      : "";
-  const subject =
-    kind === "reminder"
-      ? `Reminder: invoice ${invoice.invoice_number} — ${landlord.name}`
-      : `Invoice ${invoice.invoice_number} — ${landlord.name}`;
+  const subject = `Invoice ${invoice.invoice_number} — ${landlord.name}`;
 
-  const bankLines = landlordHasBankDetails(invoice.landlord_id)
-    ? `Sort code: ${landlord.sortCode}\nAccount number: ${landlord.accountNumber}\n`
-    : "";
+  const bankLines = bacsLines(landlord).join("\n");
   const addressBlock = addressLines(landlord.address).join("\n");
 
   const lineText =
@@ -110,7 +96,7 @@ export async function sendInvoiceEmail(
           .join("\n")
       : `  ${formatGBP(invoice.amount_pence)}`;
 
-  const text = `${reminder}Hello ${invoice.tenant_name},
+  const text = `Hello ${invoice.tenant_name},
 
 Please find invoice ${invoice.invoice_number} from ${landlord.name} for lock-up ${garagePhrase(invoice)} (${periodLabel(invoice.period_start)}).
 
@@ -136,8 +122,7 @@ Swan Street Lock-Ups`;
           .join("")}</ul>`
       : "";
 
-  const html = `<p>${kind === "reminder" ? "This is a reminder that the invoice below is still unpaid." : ""}</p>
-<p>Hello ${escapeHtml(invoice.tenant_name)},</p>
+  const html = `<p>Hello ${escapeHtml(invoice.tenant_name)},</p>
 <p>Please find invoice <strong>${escapeHtml(invoice.invoice_number)}</strong> from ${escapeHtml(landlord.name)} for lock-up ${escapeHtml(garagePhrase(invoice))} (${escapeHtml(periodLabel(invoice.period_start))}).</p>
 ${htmlLines}
 <p>Amount due: <strong>${formatGBP(invoice.amount_pence)}</strong><br/>Due date: ${formatUKDate(invoice.due_date)}</p>

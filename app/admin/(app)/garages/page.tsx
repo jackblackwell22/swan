@@ -24,7 +24,8 @@ export default function GaragesAdminPage() {
       <section className="max-w-2xl space-y-2 rounded-xl bg-white p-5 text-sm ring-1 ring-border">
         <h2 className="text-lg text-ink">Payment references</h2>
         <p className="text-muted-foreground">
-          Each invoice has a unique BACS reference so a statement CSV can match it:
+          Each invoice has a unique payment reference so the tenant can put it on
+          the bank transfer:
         </p>
         <p className="font-mono text-sm">SWAN-{"{J|D}"}-{"{garages}"}-{"{MON}"}{"{YY}"}</p>
         <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
@@ -46,8 +47,9 @@ export default function GaragesAdminPage() {
         </ul>
         <p className="text-muted-foreground">
           If a tenant rents from both of you, that month produces two invoices and
-          two emails, each from the landlord of those garages. CSV matching still
-          looks at this reference first.
+          two emails, each from the landlord of those garages. The tenant pays
+          that landlord’s BACS account, printed on the PDF when you have filled
+          it in.
         </p>
       </section>
     </div>

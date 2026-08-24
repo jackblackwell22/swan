@@ -75,8 +75,8 @@ Anything left blank is **hidden**. That is deliberate.
 | `VAT_REGISTERED` | `true` only if you are VAT registered |
 | `VAT_NUMBER` | Only if you want it on invoices |
 | `JACK_FROM_EMAIL` / `DAVID_FROM_EMAIL` | From address on that landlord’s invoices. Leave blank until real — PDFs still generate. |
-| `JACK_BANK_SORT_CODE` / `JACK_BANK_ACCOUNT_NUMBER` | Jack’s BACS details, printed only when both are set |
-| `DAVID_BANK_SORT_CODE` / `DAVID_BANK_ACCOUNT_NUMBER` | David’s BACS details, printed only when both are set |
+| `JACK_BANK_ACCOUNT_NAME` / `JACK_BANK_SORT_CODE` / `JACK_BANK_ACCOUNT_NUMBER` | Jack’s BACS details, printed only when filled in. You can also set these on the Garages page. |
+| `DAVID_BANK_ACCOUNT_NAME` / `DAVID_BANK_SORT_CODE` / `DAVID_BANK_ACCOUNT_NUMBER` | David’s BACS details, printed only when filled in. |
 | `ADMIN1_EMAIL` / `ADMIN1_PASSWORD` | First owner. Trial: `dad@example.com` / `change-me-dad` |
 | `ADMIN2_EMAIL` / `ADMIN2_PASSWORD` | Second owner. Trial: `son@example.com` / `change-me-son` |
 | `SESSION_SECRET` | A long random sentence, at least 32 characters. Do not share it. |
@@ -93,11 +93,10 @@ There is no company number, VAT number or bank account invented for you. Add tho
 
 Sign in at `/admin`.
 
-1. **Garages** — the six lock-ups are numbered **7, 8, 9, 10, 11, 12**. For each one, choose Jack Blackwell or David Blackwell. Leave it unset until you know; the desk will not guess. Each landlord also has a postal address field here; it prints on their invoices under their name, and stays hidden if blank.
+1. **Garages** — the six lock-ups are numbered **7, 8, 9, 10, 11, 12**. For each one, choose Jack Blackwell or David Blackwell. Leave it unset until you know; the desk will not guess. Each landlord has a postal address and BACS fields (account name, sort code, account number) here; they print on their invoices and stay hidden if blank.
 2. **Tenants** — name, email, which of 7–12 they rent (one or more), rent **per garage**, business or private, active or ended. A garage can only be let to one active tenant at a time.
 3. **This month** — “Create this month’s invoices” makes PDFs for every **active** tenant. One invoice per tenant per landlord per month: two of Jack’s units is one Jack invoice with two line items; one of Jack’s and one of David’s is two invoices. You can also invoice one tenant from their page.
-4. **Invoices** — download the PDF, email it (if that landlord’s from-email and SMTP are filled in), resend, or mark paid. If a landlord’s email is not set, the PDF still generates and the desk says email is not set up for them.
-5. **Payments** — one click marks an invoice paid. Or upload a CSV from online banking. The site looks for the payment reference first (`SWAN-J-7-8-SEP26`). Amount and date alone are only a **suggestion** you confirm. If two tenants pay the same rent, it will not guess.
+4. **Invoices** — download the PDF, email it (if that landlord’s from-email and SMTP are filled in), or resend. If a landlord’s email is not set, the PDF still generates and the desk says email is not set up for them. Tenants pay that landlord by BACS using the account on the PDF.
 
 Both of you use the same owners’ desk. Jack and David are the two landlords, not two separate apps.
 
@@ -105,7 +104,7 @@ On a development computer the site includes a few tenants clearly named **EXAMPL
 
 ### Payment references
 
-Every invoice has a unique reference so BACS matching works:
+Every invoice has a unique reference for the tenant to put on the bank transfer:
 
 `SWAN-{J or D}-{garage numbers}-{MON}{YY}`
 
@@ -117,7 +116,7 @@ Examples:
 - Jack, garages 7 and 8, September 2026 → `SWAN-J-7-8-SEP26`
 - David, garage 10, September 2026 → `SWAN-D-10-SEP26`
 
-Ask tenants to put that on the bank transfer in full. CSV matching still uses this reference first. That is how matching works without paying a bank API.
+Ask tenants to put that on the transfer in full, together with the BACS details printed on that landlord’s invoice.
 
 ---
 
@@ -139,8 +138,6 @@ Until SMTP is filled, invoices are still generated. They are just not emailed au
 
 On the 1st of the month at 08:05 Europe/London the running website creates invoices for active tenants and emails them if SMTP is set.
 
-Unpaid invoices get a reminder after 7 days and 14 days (09:10 each morning, if SMTP is set).
-
 If the computer is not running overnight, you can:
 
 - Click **Create this month’s invoices** on the owners’ desk, or
@@ -148,19 +145,16 @@ If the computer is not running overnight, you can:
 
   ```bash
   npm run job:monthly
-  npm run job:reminders
   ```
 
-- Or ask the host to call these addresses once a month / once a day (replace the secret):
+- Or ask the host to call this address once a month (replace the secret):
 
-  `https://your-domain/api/jobs/monthly?secret=YOUR_CRON_SECRET`  
-  `https://your-domain/api/jobs/reminders?secret=YOUR_CRON_SECRET`
+  `https://your-domain/api/jobs/monthly?secret=YOUR_CRON_SECRET`
 
 On a small always-on box (a cheap VPS, or a home computer that stays on), a crontab is enough:
 
 ```
 5 8 1 * * cd /path/to/this/folder && /usr/bin/npm run job:monthly
-10 9 * * * cd /path/to/this/folder && /usr/bin/npm run job:reminders
 ```
 
 ---
@@ -190,19 +184,6 @@ Keep a copy of the `data` folder somewhere safe. That folder is the tenants, inv
 
 ---
 
-## Bank statement CSV
-
-Most UK banks let you download transactions as CSV. A simple file looks like the example in `examples/sample-bank-statement.csv`:
-
-```text
-Date,Description,Amount
-01/08/2026,BACS SWAN-J-7-AUG26 RIVERSIDE,175.00
-```
-
-Columns named Date, Description and Amount (or “Paid in” / “Money in”) are understood. Only money **in** is read. We do not store anyone’s account number from the file.
-
----
-
 ## Security (short version)
 
 - Passwords are stored as hashes, not as the password itself.
@@ -222,6 +203,5 @@ Columns named Date, Description and Amount (or “Paid in” / “Money in”) a
 | `npm run build` | Prepares the live copy |
 | `npm start` | Runs the live copy |
 | `npm run job:monthly` | Create this month’s invoices now |
-| `npm run job:reminders` | Send 7- and 14-day reminders now |
 
 The code lives in this project folder. You do not need GitHub to run it.

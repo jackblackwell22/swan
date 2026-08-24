@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { listEnquiries, listGarages, listInvoices, monthStats, unpaidInvoices } from "@/lib/db";
+import { listEnquiries, listGarages, listInvoices, monthStats } from "@/lib/db";
 import { formatGBP, formatUKDate, londonDateISO, periodLabel } from "@/lib/format";
 import { currentPeriodStart } from "@/lib/invoicing";
 import { RunJobsButtons } from "@/components/admin/run-jobs-buttons";
@@ -18,12 +18,15 @@ import { InvoiceActions } from "@/components/admin/invoice-actions";
 
 export const dynamic = "force-dynamic";
 
+function emailState(status: string) {
+  return status === "draft" ? "Draft" : "Sent";
+}
+
 export default function AdminHomePage() {
   const period = currentPeriodStart();
   const stats = monthStats(period);
-  const unpaid = unpaidInvoices();
+  const thisMonth = listInvoices().filter((invoice) => invoice.period_start === period);
   const recentEnquiries = listEnquiries().slice(0, 5);
-  const overdue = listInvoices().filter((invoice) => invoice.status === "overdue");
   const today = londonDateISO();
   const unownedGarages = listGarages().filter((garage) => !garage.landlord_id);
 
@@ -52,7 +55,7 @@ export default function AdminHomePage() {
         </p>
       ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Expected from active tenants</CardTitle>
@@ -63,41 +66,28 @@ export default function AdminHomePage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Invoiced</CardTitle>
+            <CardTitle>Invoiced this month</CardTitle>
           </CardHeader>
           <CardContent className="text-2xl font-[family-name:var(--font-heading)]">
             {formatGBP(stats.invoiced)}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Paid</CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-[family-name:var(--font-heading)] text-door">
-            {formatGBP(stats.paid)}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Outstanding</CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-[family-name:var(--font-heading)] text-brick">
-            {formatGBP(stats.outstanding)}
+            <span className="ml-2 text-sm font-sans text-muted-foreground">
+              {stats.count} invoice{stats.count === 1 ? "" : "s"}
+            </span>
           </CardContent>
         </Card>
       </div>
 
       <section>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-xl text-ink">Unpaid invoices</h2>
+          <h2 className="text-xl text-ink">This month&apos;s invoices</h2>
           <Button render={<Link href="/admin/invoices" />} variant="outline" size="sm">
             All invoices
           </Button>
         </div>
-        {unpaid.length === 0 ? (
+        {thisMonth.length === 0 ? (
           <p className="rounded-lg bg-white p-6 text-sm text-muted-foreground ring-1 ring-border">
-            Nothing outstanding. Use “Create this month&apos;s invoices” when you are
-            ready, or add a tenant first.
+            None yet. Use “Create this month&apos;s invoices” when you are ready, or add
+            a tenant first.
           </p>
         ) : (
           <div className="overflow-hidden rounded-xl bg-white ring-1 ring-border">
@@ -108,13 +98,12 @@ export default function AdminHomePage() {
                   <TableHead>Landlord</TableHead>
                   <TableHead>Tenant</TableHead>
                   <TableHead>Reference</TableHead>
-                  <TableHead>Due</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead />
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {unpaid.map((invoice) => (
+                {thisMonth.map((invoice) => (
                   <TableRow key={invoice.id}>
                     <TableCell>
                       <Link className="text-door underline-offset-2 hover:underline" href={`/admin/invoices/${invoice.id}`}>
@@ -129,7 +118,6 @@ export default function AdminHomePage() {
                     <TableCell>{invoice.landlord_name || "—"}</TableCell>
                     <TableCell>{invoice.tenant_name}</TableCell>
                     <TableCell className="font-mono text-xs">{invoice.payment_reference}</TableCell>
-                    <TableCell>{formatUKDate(invoice.due_date)}</TableCell>
                     <TableCell>{formatGBP(invoice.amount_pence)}</TableCell>
                     <TableCell className="text-right">
                       <InvoiceActions invoiceId={invoice.id} status={invoice.status} compact />
@@ -141,13 +129,6 @@ export default function AdminHomePage() {
           </div>
         )}
       </section>
-
-      {overdue.length > 0 ? (
-        <p className="text-sm text-brick">
-          {overdue.length} invoice{overdue.length === 1 ? "" : "s"} past the due
-          date.
-        </p>
-      ) : null}
 
       <section>
         <div className="mb-3 flex items-center justify-between">

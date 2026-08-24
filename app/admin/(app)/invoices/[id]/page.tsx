@@ -4,14 +4,13 @@ import { Badge } from "@/components/ui/badge";
 import { getInvoice, getResolvedLandlord } from "@/lib/db";
 import { formatGBP, formatUKDate, periodLabel } from "@/lib/format";
 import { InvoiceActions } from "@/components/admin/invoice-actions";
-import { addressLines } from "@/lib/landlords";
+import { addressLines, bacsLines } from "@/lib/landlords";
 import {
   canEmailAsLandlord,
   getBusinessConfig,
   isLandlordId,
   isSmtpHostConfigured,
   landlordEnvPrefix,
-  landlordHasBankDetails,
 } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
@@ -30,8 +29,8 @@ export default async function InvoiceDetailPage({
     : null;
   const fromName = landlord?.name || invoice.landlord_name || config.name;
   const fromAddress = landlord ? addressLines(landlord.address) : [];
+  const payLines = landlord ? bacsLines(landlord) : [];
   const canEmail = landlord ? canEmailAsLandlord(landlord.id) : false;
-  const hasBank = landlord ? landlordHasBankDetails(landlord.id) : false;
   const garageLabel =
     invoice.lines.length > 0
       ? invoice.lines.map((line) => line.garage_number).join(", ")
@@ -100,15 +99,11 @@ export default async function InvoiceDetailPage({
           </dd>
         </div>
         <div>
-          <dt className="text-muted-foreground">Amount and status</dt>
+          <dt className="text-muted-foreground">Amount</dt>
           <dd className="mt-1">
-            {formatGBP(invoice.amount_pence)} · {invoice.status}
-            {invoice.paid_at ? (
-              <>
-                <br />
-                Paid {formatUKDate(invoice.paid_at.slice(0, 10))}
-              </>
-            ) : null}
+            {formatGBP(invoice.amount_pence)}
+            <br />
+            {invoice.status === "draft" ? "Not emailed yet" : "Emailed or marked sent"}
           </dd>
         </div>
         <div className="sm:col-span-2">
@@ -131,17 +126,19 @@ export default async function InvoiceDetailPage({
           <dt className="text-muted-foreground">BACS</dt>
           <dd className="mt-1 font-mono">{invoice.payment_reference}</dd>
           <dd className="mt-1 text-muted-foreground">
-            Scheme: SWAN-J or SWAN-D, then the garage numbers on this invoice, then the
-            month. Matching on a bank CSV still uses this reference first.
+            Ask the tenant to put this reference on the bank transfer. J is Jack, D is
+            David, then the garage numbers, then the month.
           </dd>
-          {hasBank && landlord ? (
-            <dd className="mt-1">
-              Sort code {landlord.sortCode} · Account {landlord.accountNumber}
+          {payLines.length > 0 ? (
+            <dd className="mt-1 space-y-0.5">
+              {payLines.map((line) => (
+                <div key={line}>{line}</div>
+              ))}
             </dd>
           ) : (
             <dd className="mt-1 text-muted-foreground">
-              Bank details for this landlord are not in the configuration file, so they
-              are omitted from the PDF.
+              No BACS details on file for this landlord yet, so they are omitted from
+              the PDF. The payment reference is still printed.
             </dd>
           )}
         </div>

@@ -8,31 +8,20 @@ import { GARAGE_NUMBERS } from "@/lib/config";
 import {
   createTenant,
   getInvoice,
-  getStatementRow,
   getTenant,
-  markInvoicePaid,
   markInvoiceSent,
   setGarageLandlord,
-  setLandlordAddress,
-  updateStatementMatch,
+  setLandlordDetails,
   updateTenant,
 } from "@/lib/db";
 import { sendInvoiceEmail } from "@/lib/email";
 import { createInvoicesForTenant, regeneratePdf } from "@/lib/invoicing";
-import { runMonthlyInvoiceJob, runReminderJob } from "@/lib/jobs";
-import { londonDateISO } from "@/lib/format";
-import {
-  applyStatementMatches,
-  confirmSuggestedMatch,
-  matchStatementRows,
-  parseBankCsv,
-} from "@/lib/matching";
+import { runMonthlyInvoiceJob } from "@/lib/jobs";
 
 function revalidateAdmin() {
   revalidatePath("/admin");
   revalidatePath("/admin/tenants");
   revalidatePath("/admin/invoices");
-  revalidatePath("/admin/payments");
   revalidatePath("/admin/garages");
 }
 
@@ -119,10 +108,16 @@ export async function saveGarageLandlords(formData: FormData) {
   revalidateAdmin();
 }
 
-export async function saveLandlordAddresses(formData: FormData) {
+export async function saveLandlordDetails(formData: FormData) {
   await requireAdmin();
-  setLandlordAddress("jack", String(formData.get("address_jack") || ""));
-  setLandlordAddress("david", String(formData.get("address_david") || ""));
+  for (const id of ["jack", "david"] as const) {
+    setLandlordDetails(id, {
+      address: String(formData.get(`address_${id}`) || ""),
+      accountName: String(formData.get(`account_name_${id}`) || ""),
+      sortCode: String(formData.get(`sort_code_${id}`) || ""),
+      accountNumber: String(formData.get(`account_number_${id}`) || ""),
+    });
+  }
   revalidateAdmin();
 }
 
@@ -156,19 +151,13 @@ export async function generateInvoiceForTenant(tenantId: number) {
   }
 }
 
-export async function markPaidAction(invoiceId: number) {
-  await requireAdmin();
-  markInvoicePaid(invoiceId, londonDateISO(), "manual", "Marked paid in admin");
-  revalidateAdmin();
-}
-
 export async function sendInvoiceAction(invoiceId: number) {
   await requireAdmin();
   const invoice = getInvoice(invoiceId);
   if (!invoice) return { error: "Invoice not found." };
   const pdfPath = invoice.pdf_path || (await regeneratePdf(invoice.id));
   try {
-    const result = await sendInvoiceEmail(invoice, pdfPath, "invoice");
+    const result = await sendInvoiceEmail(invoice, pdfPath);
     if (!result.sent) return { error: result.reason };
     markInvoiceSent(invoice.id);
     revalidateAdmin();
@@ -191,53 +180,4 @@ export async function runMonthlyAction() {
   const result = await runMonthlyInvoiceJob();
   revalidateAdmin();
   return result;
-}
-
-export async function runRemindersAction() {
-  await requireAdmin();
-  const result = await runReminderJob();
-  revalidateAdmin();
-  return result;
-}
-
-export async function uploadStatementAction(formData: FormData) {
-  await requireAdmin();
-  const file = formData.get("csv");
-  if (!(file instanceof File) || file.size === 0) {
-    return { error: "Choose a CSV file from your bank." };
-  }
-  const text = await file.text();
-  try {
-    const parsed = parseBankCsv(text);
-    if (parsed.length === 0) {
-      return {
-        error:
-          "No incoming payments found. Check the CSV has Date, Description and Amount (or Paid in) columns.",
-      };
-    }
-    const matched = matchStatementRows(parsed);
-    const applied = applyStatementMatches(matched);
-    revalidateAdmin();
-    return {
-      ok: true,
-      batchId: applied.batchId,
-      autoPaid: applied.autoPaid,
-      suggested: applied.suggested,
-      total: applied.rows.length,
-    };
-  } catch (error) {
-    return {
-      error: error instanceof Error ? error.message : "Could not read that CSV.",
-    };
-  }
-}
-
-export async function confirmMatchAction(rowId: number) {
-  await requireAdmin();
-  const row = getStatementRow(rowId);
-  if (!row) return { error: "Row not found." };
-  confirmSuggestedMatch(row);
-  updateStatementMatch(row.id, row.matched_invoice_id, "confirmed");
-  revalidateAdmin();
-  return { ok: true };
 }

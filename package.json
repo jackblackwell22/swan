@@ -7,8 +7,7 @@
     "build": "next build",
     "start": "next start --port 43141 --hostname 0.0.0.0",
     "lint": "eslint",
-    "job:monthly": "npx tsx scripts/run-job.ts monthly",
-    "job:reminders": "npx tsx scripts/run-job.ts reminders"
+    "job:monthly": "npx tsx scripts/run-job.ts monthly"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

@@ -1,8 +1,6 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { getBusinessConfig } from "@/lib/config";
-import { refreshOverdueStatuses } from "@/lib/db";
-import { londonDateISO } from "@/lib/format";
 import { EmailBanner } from "@/components/admin/email-banner";
 import { LogoutButton } from "@/components/admin/logout-button";
 
@@ -11,7 +9,6 @@ const links = [
   { href: "/admin/garages", label: "Garages" },
   { href: "/admin/tenants", label: "Tenants" },
   { href: "/admin/invoices", label: "Invoices" },
-  { href: "/admin/payments", label: "Payments" },
   { href: "/admin/enquiries", label: "Enquiries" },
 ];
 
@@ -24,7 +21,6 @@ export default async function AdminAppLayout({
 }) {
   const session = await requireAdmin();
   const config = getBusinessConfig();
-  refreshOverdueStatuses(londonDateISO());
 
   return (
     <div className="min-h-screen bg-cream">

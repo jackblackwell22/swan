@@ -246,6 +246,9 @@ function migrate(db: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_tenant_garages_garage ON tenant_garages(garage_number);
   `);
   addColumnIfMissing(db, "invoices", "landlord_id", "TEXT NOT NULL DEFAULT ''");
+  addColumnIfMissing(db, "landlords", "account_name", "TEXT");
+  addColumnIfMissing(db, "landlords", "sort_code", "TEXT");
+  addColumnIfMissing(db, "landlords", "account_number", "TEXT");
   db.exec(`
     CREATE UNIQUE INDEX IF NOT EXISTS idx_invoices_tenant_landlord_period
     ON invoices(tenant_id, landlord_id, period_start)
@@ -453,24 +456,61 @@ export function setGarageLandlord(number: number, landlordId: string | null) {
     .run(landlordId, number);
 }
 
+function storedOrEnv(stored: string | null | undefined, envValue: string): string {
+  if (stored == null) return envValue;
+  return stored.trim();
+}
+
 export function getResolvedLandlord(id: LandlordId): LandlordProfile {
   const config = getLandlordConfig(id);
   const row = getDb()
-    .prepare("SELECT address FROM landlords WHERE id = ?")
-    .get(id) as { address: string | null } | undefined;
-  if (!row || row.address == null) {
-    return config;
-  }
-  return { ...config, address: row.address.trim() };
+    .prepare(
+      "SELECT address, account_name, sort_code, account_number FROM landlords WHERE id = ?",
+    )
+    .get(id) as
+    | {
+        address: string | null;
+        account_name: string | null;
+        sort_code: string | null;
+        account_number: string | null;
+      }
+    | undefined;
+  if (!row) return config;
+  return {
+    ...config,
+    address: storedOrEnv(row.address, config.address),
+    accountName: storedOrEnv(row.account_name, config.accountName),
+    sortCode: storedOrEnv(row.sort_code, config.sortCode),
+    accountNumber: storedOrEnv(row.account_number, config.accountNumber),
+  };
 }
 
-export function setLandlordAddress(id: LandlordId, address: string) {
+export function setLandlordDetails(
+  id: LandlordId,
+  input: {
+    address: string;
+    accountName: string;
+    sortCode: string;
+    accountNumber: string;
+  },
+) {
   getDb()
     .prepare(
-      `INSERT INTO landlords (id, address) VALUES (?, ?)
-       ON CONFLICT(id) DO UPDATE SET address = excluded.address`,
+      `INSERT INTO landlords (id, address, account_name, sort_code, account_number)
+       VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         address = excluded.address,
+         account_name = excluded.account_name,
+         sort_code = excluded.sort_code,
+         account_number = excluded.account_number`,
     )
-    .run(id, address.trim());
+    .run(
+      id,
+      input.address.trim(),
+      input.accountName.trim(),
+      input.sortCode.trim(),
+      input.accountNumber.trim(),
+    );
 }
 
 export function getTenantGarages(tenantId: number): TenantGarage[] {

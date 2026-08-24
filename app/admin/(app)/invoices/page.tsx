@@ -9,17 +9,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { listInvoices } from "@/lib/db";
-import { formatGBP, formatUKDate } from "@/lib/format";
+import { formatGBP } from "@/lib/format";
 import { InvoiceActions } from "@/components/admin/invoice-actions";
 
 export const dynamic = "force-dynamic";
 
-const statusLabel: Record<string, string> = {
-  draft: "Draft",
-  sent: "Sent",
-  paid: "Paid",
-  overdue: "Overdue",
-};
+const statusLabel = (status: string) => (status === "draft" ? "Draft" : "Sent");
 
 export default function InvoicesPage() {
   const invoices = listInvoices();
@@ -29,9 +24,9 @@ export default function InvoicesPage() {
       <div>
         <h1 className="text-3xl text-ink">Invoices</h1>
         <p className="text-sm text-muted-foreground">
-          One invoice per tenant per landlord per month. Two of Jack’s garages is
-          one Jack invoice with two line items. One of Jack’s and one of David’s
-          is two invoices, emailed separately when that landlord’s from-email is set.
+          One invoice per tenant per landlord per month. Download the PDF or email
+          it from this landlord. Tenants pay by BACS using the account on the PDF
+          and the payment reference.
         </p>
       </div>
       {invoices.length === 0 ? (
@@ -47,8 +42,7 @@ export default function InvoicesPage() {
                 <TableHead>Landlord</TableHead>
                 <TableHead>Tenant</TableHead>
                 <TableHead>Reference</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Due</TableHead>
+                <TableHead>Email</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead />
               </TableRow>
@@ -74,8 +68,7 @@ export default function InvoicesPage() {
                   <TableCell>{invoice.landlord_name || "—"}</TableCell>
                   <TableCell>{invoice.tenant_name}</TableCell>
                   <TableCell className="font-mono text-xs">{invoice.payment_reference}</TableCell>
-                  <TableCell>{statusLabel[invoice.status] ?? invoice.status}</TableCell>
-                  <TableCell>{formatUKDate(invoice.due_date)}</TableCell>
+                  <TableCell>{statusLabel(invoice.status)}</TableCell>
                   <TableCell>{formatGBP(invoice.amount_pence)}</TableCell>
                   <TableCell className="text-right">
                     <InvoiceActions invoiceId={invoice.id} status={invoice.status} compact />

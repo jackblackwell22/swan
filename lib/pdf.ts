@@ -8,7 +8,7 @@ import {
 } from "@/lib/config";
 import { getResolvedLandlord, type InvoiceWithTenant } from "@/lib/db";
 import { formatGBP, formatUKDate, periodLabel } from "@/lib/format";
-import { addressLines } from "@/lib/landlords";
+import { addressLines, bacsLines } from "@/lib/landlords";
 
 const blue = rgb(0.118, 0.42, 0.71);
 const brick = rgb(0.702, 0.353, 0.227);
@@ -46,8 +46,7 @@ export async function writeInvoicePdf(invoice: InvoiceWithTenant): Promise<strin
   const fromName = landlord?.name || invoice.landlord_name || config.name;
   const fromEmail = landlord?.fromEmail || "";
   const fromAddress = landlord ? addressLines(landlord.address) : [];
-  const sortCode = landlord?.sortCode || "";
-  const accountNumber = landlord?.accountNumber || "";
+  const payLines = landlord ? bacsLines(landlord) : [];
 
   const pdf = await PDFDocument.create();
   const page = pdf.addPage([595.28, 841.89]);
@@ -176,11 +175,12 @@ export async function writeInvoicePdf(invoice: InvoiceWithTenant): Promise<strin
   });
 
   y -= 40;
+  const boxHeight = 72 + payLines.length * 16;
   page.drawRectangle({
     x: 48,
-    y: y - 88,
+    y: y - (boxHeight - 20),
     width: 499,
-    height: 108,
+    height: boxHeight,
     color: cream,
     borderColor: blue,
     borderWidth: 1,
@@ -206,27 +206,16 @@ export async function writeInvoicePdf(invoice: InvoiceWithTenant): Promise<strin
     font: sansBold,
     color: ink,
   });
-
-  if (sortCode && accountNumber) {
-    page.drawText(`Sort code  ${sortCode}`, {
+  let payY = y - 58;
+  for (const line of payLines) {
+    page.drawText(pdfSafe(line), {
       x: 60,
-      y: y - 58,
+      y: payY,
       size: 10,
       font: sans,
       color: ink,
     });
-    page.drawText(`Account number  ${accountNumber}`, {
-      x: 60,
-      y: y - 74,
-      size: 10,
-      font: sans,
-      color: ink,
-    });
-  } else {
-    page.drawText(
-      "Bank details will be confirmed separately if they are not printed here.",
-      { x: 60, y: y - 60, size: 9, font: sans, color: muted },
-    );
+    payY -= 16;
   }
 
   page.drawText(

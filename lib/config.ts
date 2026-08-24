@@ -30,6 +30,7 @@ export type LandlordProfile = {
   code: "J" | "D";
   fromEmail: string;
   address: string;
+  accountName: string;
   sortCode: string;
   accountNumber: string;
 };
@@ -55,6 +56,9 @@ export function getLandlordConfig(id: LandlordId): LandlordProfile {
     code: LANDLORD_CODES[id],
     fromEmail: trim(process.env[`${prefix}_FROM_EMAIL`]),
     address: envAddress(prefix),
+    accountName: trim(
+      process.env[`${prefix}_BANK_ACCOUNT_NAME`] || process.env[`${prefix}_ACCOUNT_NAME`],
+    ),
     sortCode: trim(
       process.env[`${prefix}_BANK_SORT_CODE`] || process.env[`${prefix}_SORT_CODE`],
     ),
@@ -106,11 +110,6 @@ export function isSmtpConfigured(): boolean {
 
 export function canEmailAsLandlord(id: LandlordId): boolean {
   return isSmtpHostConfigured() && Boolean(getLandlordConfig(id).fromEmail);
-}
-
-export function landlordHasBankDetails(id: LandlordId): boolean {
-  const landlord = getLandlordConfig(id);
-  return Boolean(landlord.sortCode && landlord.accountNumber);
 }
 
 export function landlordEnvPrefix(id: LandlordId): "JACK" | "DAVID" {

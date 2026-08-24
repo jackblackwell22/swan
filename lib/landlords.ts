@@ -25,3 +25,21 @@ export function addressLines(raw: string | null | undefined): string[] {
     .map((line) => line.trim())
     .filter(Boolean);
 }
+
+export function bacsLines(landlord: {
+  accountName?: string;
+  sortCode?: string;
+  accountNumber?: string;
+}): string[] {
+  const lines: string[] = [];
+  if (landlord.accountName?.trim()) {
+    lines.push(`Account name  ${landlord.accountName.trim()}`);
+  }
+  if (landlord.sortCode?.trim()) {
+    lines.push(`Sort code  ${landlord.sortCode.trim()}`);
+  }
+  if (landlord.accountNumber?.trim()) {
+    lines.push(`Account number  ${landlord.accountNumber.trim()}`);
+  }
+  return lines;
+}

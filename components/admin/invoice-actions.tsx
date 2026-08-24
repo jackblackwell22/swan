@@ -3,11 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  markPaidAction,
-  markSentManually,
-  sendInvoiceAction,
-} from "@/app/admin/actions";
+import { markSentManually, sendInvoiceAction } from "@/app/admin/actions";
 
 export function InvoiceActions({
   invoiceId,
@@ -21,6 +17,7 @@ export function InvoiceActions({
   const router = useRouter();
   const [pending, start] = useTransition();
   const [message, setMessage] = useState("");
+  const drafted = status === "draft";
 
   return (
     <div className={compact ? "flex flex-wrap justify-end gap-1" : "flex flex-wrap gap-2"}>
@@ -31,60 +28,25 @@ export function InvoiceActions({
       >
         PDF
       </Button>
-      {status !== "paid" ? (
-        <Button
-          size="sm"
-          disabled={pending}
-          onClick={() =>
-            start(async () => {
-              await markPaidAction(invoiceId);
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={pending}
+        onClick={() =>
+          start(async () => {
+            const result = await sendInvoiceAction(invoiceId);
+            if (result && "error" in result && result.error) {
+              setMessage(result.error);
+            } else {
+              setMessage(drafted ? "Invoice emailed." : "Invoice emailed again.");
               router.refresh();
-            })
-          }
-        >
-          Mark paid
-        </Button>
-      ) : null}
-      {status === "draft" ? (
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={pending}
-          onClick={() =>
-            start(async () => {
-              const result = await sendInvoiceAction(invoiceId);
-              if (result && "error" in result && result.error) {
-                setMessage(result.error);
-              } else {
-                setMessage("Invoice emailed.");
-                router.refresh();
-              }
-            })
-          }
-        >
-          Email
-        </Button>
-      ) : status !== "paid" ? (
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={pending}
-          onClick={() =>
-            start(async () => {
-              const result = await sendInvoiceAction(invoiceId);
-              if (result && "error" in result && result.error) {
-                setMessage(result.error);
-              } else {
-                setMessage("Invoice emailed again.");
-                router.refresh();
-              }
-            })
-          }
-        >
-          Resend
-        </Button>
-      ) : null}
-      {status === "draft" && !compact ? (
+            }
+          })
+        }
+      >
+        {drafted ? "Email" : "Resend"}
+      </Button>
+      {drafted && !compact ? (
         <Button
           size="sm"
           variant="ghost"

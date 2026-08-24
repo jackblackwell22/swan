@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getBusinessConfig, getLandlords, landlordHasBankDetails } from "@/lib/config";
+import { getBusinessConfig } from "@/lib/config";
+import { getResolvedLandlord } from "@/lib/db";
+import { LANDLORD_IDS, bacsLines } from "@/lib/landlords";
 
 export const metadata: Metadata = {
   title: "For tenants",
@@ -8,7 +10,9 @@ export const metadata: Metadata = {
 
 export default function ForTenantsPage() {
   const config = getBusinessConfig();
-  const landlords = getLandlords().filter((landlord) => landlordHasBankDetails(landlord.id));
+  const landlords = LANDLORD_IDS.map(getResolvedLandlord).filter(
+    (landlord) => bacsLines(landlord).length > 0,
+  );
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
@@ -25,37 +29,48 @@ export default function ForTenantsPage() {
       <section className="mt-10">
         <h2 className="text-2xl text-ink">Paying rent</h2>
         <p className="mt-3 text-base leading-relaxed text-ink/80">
-          Rent is due by bank transfer. Each invoice has its own payment
-          reference in the form{" "}
+          Rent is due by bank transfer to the landlord named on your invoice.
+          Each invoice has its own payment reference in the form{" "}
           <span className="font-mono text-sm">SWAN-J-7-8-SEP26</span> or{" "}
           <span className="font-mono text-sm">SWAN-D-10-SEP26</span> — Jack’s
           invoices use J, David’s use D, then the garage numbers on that
           invoice, then the month. If you rent from both, you will get two
-          invoices that month. Please put the reference on the transfer in
-          full. It is how we match your payment to the right invoice.
+          invoices that month, each with that landlord’s account. Please put
+          the reference on the transfer in full.
         </p>
         {landlords.length > 0 ? (
           <div className="mt-4 space-y-4">
             {landlords.map((landlord) => (
               <div key={landlord.id} className="rounded-lg bg-white p-4 text-sm ring-1 ring-border">
                 <p className="font-medium text-ink">{landlord.name}</p>
-                <p className="mt-2">
-                  <span className="text-muted-foreground">Sort code</span>
-                  <br />
-                  {landlord.sortCode}
-                </p>
-                <p className="mt-2">
-                  <span className="text-muted-foreground">Account number</span>
-                  <br />
-                  {landlord.accountNumber}
-                </p>
+                {landlord.accountName ? (
+                  <p className="mt-2">
+                    <span className="text-muted-foreground">Account name</span>
+                    <br />
+                    {landlord.accountName}
+                  </p>
+                ) : null}
+                {landlord.sortCode ? (
+                  <p className="mt-2">
+                    <span className="text-muted-foreground">Sort code</span>
+                    <br />
+                    {landlord.sortCode}
+                  </p>
+                ) : null}
+                {landlord.accountNumber ? (
+                  <p className="mt-2">
+                    <span className="text-muted-foreground">Account number</span>
+                    <br />
+                    {landlord.accountNumber}
+                  </p>
+                ) : null}
               </div>
             ))}
           </div>
         ) : (
           <p className="mt-3 text-base leading-relaxed text-ink/80">
-            Bank details are printed on your invoice when we have them set up
-            for that landlord, or we will give them to you directly.
+            Bank details are printed on your invoice when that landlord has them
+            set up, or we will give them to you directly.
           </p>
         )}
         <p className="mt-3 text-base leading-relaxed text-ink/80">
