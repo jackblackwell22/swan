@@ -12,8 +12,8 @@ export default function PrivacyPage() {
     <div className="mx-auto max-w-3xl px-4 py-12">
       <h1 className="font-display text-4xl">Privacy</h1>
       <p className="mt-4 text-lg text-muted">
-        {SITE_NAME} is run by Jack Blackwell and David Blackwell. The lock-ups
-        are on {SITE_STREET}, {SITE_PLACE}.
+        {SITE_NAME} is a family-run lock-up site. The lock-ups are on{" "}
+        {SITE_STREET}, {SITE_PLACE}.
       </p>
       <h2 className="mt-8 font-display text-2xl">What we keep</h2>
       <ul className="mt-3 list-disc space-y-2 pl-5 text-muted">
@@ -38,7 +38,7 @@ export default function PrivacyPage() {
       <p className="mt-3 text-muted">
         {accepting
           ? "Use the enquiry form if you want to know what we hold, or to ask us to update it."
-          : "Write to Jack or David in the usual way you already use, as the enquiry form is closed while every lock-up is let."}
+          : "Write in the usual way you already use, as the enquiry form is closed while every lock-up is let."}
       </p>
     </div>
   );

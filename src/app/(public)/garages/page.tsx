@@ -16,8 +16,8 @@ export default function GaragesPage() {
       <p className="mt-4 max-w-2xl text-lg text-muted">
         Units {GARAGE_UNITS.join(", ")} are lock-up garages on Swan Street. Each
         unit has a pair of wooden double doors in the original brick building.
-        Jack Blackwell and David Blackwell let them; which of them owns which
-        unit is recorded on the owners’ desk, not guessed here.
+        Which landlord lets which unit is recorded on the owners’ desk, not
+        published here.
       </p>
 
       <div className="mt-8">

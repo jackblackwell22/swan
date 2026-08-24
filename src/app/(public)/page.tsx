@@ -20,9 +20,8 @@ export default function HomePage() {
             </h1>
             <p className="mt-5 max-w-xl text-lg text-muted">
               Swan Street Lock-Ups is a short row of traditional brick lock-ups
-              on Swan Street in Royal Leamington Spa. The landlords are Jack
-              Blackwell and David Blackwell. Units {GARAGE_UNITS[0]} to {lastUnit}{" "}
-              are the garages on this site.
+              on Swan Street in Royal Leamington Spa. Units {GARAGE_UNITS[0]} to{" "}
+              {lastUnit} are the garages on this site.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <EnquireCta accepting={accepting} />
@@ -74,8 +73,8 @@ export default function HomePage() {
           <article className="rounded-lg border border-line bg-paper p-6">
             <h2 className="font-display text-2xl">If you already rent</h2>
             <p className="mt-3 text-muted">
-              Rent is invoiced by Jack or David for the lock-ups they each let.
-              Pay by bank transfer using the reference printed on the invoice.
+              Rent is invoiced by the landlord for each lock-up they let. Pay by
+              bank transfer using the reference printed on the invoice.
             </p>
             <a href="/tenants" className="mt-4 inline-block font-semibold text-door hover:underline">
               For tenants
