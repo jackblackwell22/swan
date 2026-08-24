@@ -142,5 +142,6 @@ export async function resendInvoiceAction(formData: FormData) {
   await emailInvoice(id);
   revalidatePath("/admin");
   revalidatePath("/admin/invoices");
-  redirect(`/admin/invoices?resent=${id}`);
+  const fromThisMonth = String(formData.get("from") ?? "") === "this-month";
+  redirect(fromThisMonth ? `/admin?resent=${id}` : `/admin/invoices?resent=${id}`);
 }

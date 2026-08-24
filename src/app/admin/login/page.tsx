@@ -17,14 +17,14 @@ export default async function LoginPage({
       <div className="w-full max-w-md rounded-lg border border-line bg-paper p-8 shadow-sm">
         <h1 className="font-display text-3xl text-door">Owners’ desk</h1>
         <p className="mt-2 text-sm text-muted">
-          For Jack Blackwell and David Blackwell. Sign in with the username and
-          password stored on this computer, not in the website files.
+          Sign in with the username and password stored on this computer, not in
+          the website files.
         </p>
         {!configured ? (
           <p className="mt-6 rounded-md bg-brick/10 px-4 py-3 text-sm text-brick-dark">
-            No owner logins are set yet. Add JACK_USERNAME, JACK_PASSWORD,
-            DAVID_USERNAME and DAVID_PASSWORD (and SESSION_SECRET) in your
-            environment file, then restart the site.
+            No owner logins are set yet. Add the owner usernames and passwords
+            (and SESSION_SECRET) in your environment file, then restart the
+            site.
           </p>
         ) : null}
         {params.error === "1" ? (

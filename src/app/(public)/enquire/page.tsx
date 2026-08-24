@@ -51,8 +51,8 @@ export default async function EnquirePage({
         </p>
       ) : params.sent === "1" ? (
         <p className="mt-6 rounded-md border border-line bg-paper px-4 py-4 text-lg">
-          Thank you. Your message is with Jack and David. They will reply using
-          the contact details you left.
+          Thank you. Your message has been received. We will reply using the
+          contact details you left.
         </p>
       ) : (
         <>
