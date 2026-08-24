@@ -1,0 +1,11 @@
+node_modules
+.next
+out
+data/*.db
+data/*.db-wal
+data/*.db-shm
+data/invoices/*.pdf
+.env
+.env.local
+*.log
+.DS_Store
