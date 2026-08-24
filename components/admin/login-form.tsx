@@ -6,10 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export function LoginForm() {
+export function LoginForm({
+  trialEmail = "",
+  trialPassword = "",
+}: {
+  trialEmail?: string;
+  trialPassword?: string;
+}) {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState(trialEmail);
+  const [password, setPassword] = useState(trialPassword);
   const [totp, setTotp] = useState("");
   const [step, setStep] = useState<"password" | "totp">("password");
   const [error, setError] = useState("");
@@ -35,11 +41,6 @@ export function LoginForm() {
     }
     if (data.next === "totp") {
       setStep("totp");
-      return;
-    }
-    if (data.next === "setup") {
-      router.push("/admin/setup-2fa");
-      router.refresh();
       return;
     }
     router.push("/admin");
@@ -117,7 +118,7 @@ export function LoginForm() {
       )}
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
       <Button type="submit" className="h-10 w-full" disabled={busy}>
-        {busy ? "Please wait…" : step === "totp" ? "Confirm code" : "Continue"}
+        {busy ? "Please wait…" : step === "totp" ? "Confirm code" : "Sign in"}
       </Button>
     </form>
   );

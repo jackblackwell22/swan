@@ -56,16 +56,9 @@ export async function POST(request: NextRequest) {
       noteLogin(ip, email, false);
       return NextResponse.json({ error: "That authenticator code was not right." }, { status: 401 });
     }
-    noteLogin(ip, email, true);
-    await setSession({ adminId: admin.id, email: admin.email });
-    return NextResponse.json({ ok: true, next: "app" });
   }
 
   noteLogin(ip, email, true);
-  await setPending({
-    adminId: admin.id,
-    email: admin.email,
-    purpose: "setup",
-  });
-  return NextResponse.json({ ok: true, next: "setup" });
+  await setSession({ adminId: admin.id, email: admin.email });
+  return NextResponse.json({ ok: true, next: "app" });
 }

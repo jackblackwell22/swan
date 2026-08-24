@@ -1,7 +1,7 @@
 import path from "node:path";
 import dotenv from "dotenv";
 
-dotenv.config({ path: ".env.local", quiet: true });
+dotenv.config({ path: ".env.local", quiet: true, override: true });
 dotenv.config({ path: ".env", quiet: true });
 
 function trim(value: string | undefined): string {

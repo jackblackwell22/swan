@@ -6,6 +6,7 @@ import { getAdminSeeds, getDatabasePath, isDevelopment } from "@/lib/config";
 
 const globalForDb = globalThis as unknown as {
   swanDb?: Database.Database;
+  swanAdminFingerprint?: string;
 };
 
 export type TenantType = "business" | "private";
@@ -189,11 +190,22 @@ function migrate(db: Database.Database) {
   `);
 }
 
+function adminFingerprint(): string {
+  return JSON.stringify(
+    getAdminSeeds().map((seed) => [seed.email.toLowerCase(), seed.password, seed.totpSecret]),
+  );
+}
+
 function syncAdmins(db: Database.Database) {
   const seeds = getAdminSeeds();
+  const fingerprint = adminFingerprint();
+  if (globalForDb.swanAdminFingerprint === fingerprint) return;
   const now = new Date().toISOString();
+  const seedEmails = seeds.map((seed) => seed.email.toLowerCase());
   for (const seed of seeds) {
     const hash = bcrypt.hashSync(seed.password, 12);
+    const totpSecret = seed.totpSecret || null;
+    const totpEnabled = seed.totpSecret ? 1 : 0;
     const existing = db
       .prepare("SELECT * FROM admins WHERE email = ?")
       .get(seed.email) as Admin | undefined;
@@ -201,23 +213,21 @@ function syncAdmins(db: Database.Database) {
       db.prepare(
         `INSERT INTO admins (email, password_hash, totp_secret, totp_enabled, created_at)
          VALUES (?, ?, ?, ?, ?)`,
-      ).run(
-        seed.email,
-        hash,
-        seed.totpSecret || null,
-        seed.totpSecret ? 1 : 0,
-        now,
-      );
+      ).run(seed.email, hash, totpSecret, totpEnabled, now);
       continue;
     }
-    const totpSecret = seed.totpSecret || existing.totp_secret;
-    const totpEnabled = seed.totpSecret
-      ? 1
-      : existing.totp_enabled;
     db.prepare(
       `UPDATE admins SET password_hash = ?, totp_secret = ?, totp_enabled = ? WHERE id = ?`,
     ).run(hash, totpSecret, totpEnabled, existing.id);
   }
+  if (seedEmails.length > 0) {
+    const placeholders = seedEmails.map(() => "?").join(", ");
+    db.prepare(`DELETE FROM admins WHERE lower(email) NOT IN (${placeholders})`).run(
+      ...seedEmails,
+    );
+  }
+  db.prepare("DELETE FROM login_attempts").run();
+  globalForDb.swanAdminFingerprint = fingerprint;
 }
 
 function seedSampleTenants(db: Database.Database) {
@@ -264,18 +274,19 @@ function seedSampleTenants(db: Database.Database) {
 }
 
 export function getDb(): Database.Database {
-  if (globalForDb.swanDb) return globalForDb.swanDb;
-  const dbPath = getDatabasePath();
-  fs.mkdirSync(path.dirname(dbPath), { recursive: true });
-  fs.mkdirSync(path.join(process.cwd(), "data", "invoices"), { recursive: true });
-  const db = new Database(dbPath);
-  db.pragma("journal_mode = WAL");
-  db.pragma("foreign_keys = ON");
-  migrate(db);
-  syncAdmins(db);
-  seedSampleTenants(db);
-  globalForDb.swanDb = db;
-  return db;
+  if (!globalForDb.swanDb) {
+    const dbPath = getDatabasePath();
+    fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+    fs.mkdirSync(path.join(process.cwd(), "data", "invoices"), { recursive: true });
+    const db = new Database(dbPath);
+    db.pragma("journal_mode = WAL");
+    db.pragma("foreign_keys = ON");
+    migrate(db);
+    seedSampleTenants(db);
+    globalForDb.swanDb = db;
+  }
+  syncAdmins(globalForDb.swanDb);
+  return globalForDb.swanDb;
 }
 
 export function getAdminByEmail(email: string): Admin | undefined {

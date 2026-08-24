@@ -50,9 +50,14 @@ You need [Node.js](https://nodejs.org) 20 or newer (the LTS version is fine).
 
 6. In a browser open [http://127.0.0.1:43141](http://127.0.0.1:43141).
 
-The first time you sign in at `/admin/login`, you will be asked to scan a QR code with an authenticator app (Google Authenticator, Authy, or the one built into many phones). After that, sign-in is email, password, then a six-digit code.
+Owners’ desk: [http://127.0.0.1:43141/admin/login](http://127.0.0.1:43141/admin/login)
 
-If you set `ADMIN1_TOTP_SECRET` in `.env.local`, two-factor is already on for that owner and you will not see the QR screen.
+On this trial copy, sign in with email and password only (no authenticator app):
+
+- `dad@example.com` / `change-me-dad`
+- `son@example.com` / `change-me-son`
+
+Two-factor is off until you choose to turn it on by setting `ADMIN1_TOTP_SECRET` or `ADMIN2_TOTP_SECRET` in `.env.local`.
 
 ---
 
@@ -69,8 +74,8 @@ Anything left blank is **hidden**. That is deliberate.
 | `VAT_REGISTERED` | `true` only if you are VAT registered |
 | `VAT_NUMBER` | Only if you want it on invoices |
 | `BANK_SORT_CODE` / `BANK_ACCOUNT_NUMBER` | Printed on invoices **only if both are set** |
-| `ADMIN1_EMAIL` / `ADMIN1_PASSWORD` | Father |
-| `ADMIN2_EMAIL` / `ADMIN2_PASSWORD` | Son |
+| `ADMIN1_EMAIL` / `ADMIN1_PASSWORD` | First owner. Trial: `dad@example.com` / `change-me-dad` |
+| `ADMIN2_EMAIL` / `ADMIN2_PASSWORD` | Second owner. Trial: `son@example.com` / `change-me-son` |
 | `SESSION_SECRET` | A long random sentence, at least 32 characters. Do not share it. |
 | `CRON_SECRET` | Another long random string, used if your host runs the monthly job by web address |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `FROM_EMAIL` | Your domain mailbox. Leave blank until it exists — PDFs still work. |

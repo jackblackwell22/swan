@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { LoginForm } from "@/components/admin/login-form";
-import { getBusinessConfig } from "@/lib/config";
+import { getBusinessConfig, isDevelopment } from "@/lib/config";
 import { getSession } from "@/lib/auth";
 
 export const metadata: Metadata = {
@@ -11,6 +11,7 @@ export const metadata: Metadata = {
 export default async function LoginPage() {
   if (await getSession()) redirect("/admin");
   const config = getBusinessConfig();
+  const trial = isDevelopment();
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-cream px-4">
@@ -20,11 +21,22 @@ export default async function LoginPage() {
           {config.name}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Sign in with the email and password from your configuration file, then
-          a code from your authenticator app.
+          Sign in with your owner email and password.
         </p>
+        {trial ? (
+          <p className="mt-3 rounded-md bg-cream px-3 py-2 text-sm text-ink">
+            Trial sign-in: <span className="font-medium">dad@example.com</span> /{" "}
+            <span className="font-medium">change-me-dad</span>
+            <br />
+            Or <span className="font-medium">son@example.com</span> /{" "}
+            <span className="font-medium">change-me-son</span>
+          </p>
+        ) : null}
         <div className="mt-6">
-          <LoginForm />
+          <LoginForm
+            trialEmail={trial ? "dad@example.com" : ""}
+            trialPassword={trial ? "change-me-dad" : ""}
+          />
         </div>
       </div>
     </div>

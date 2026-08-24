@@ -54,8 +54,8 @@ export default function PrivacyPage() {
           rent, and invoices. We do not store tenant bank account details.
         </li>
         <li>
-          If you are one of the two owners, a login cookie and an authenticator
-          secret so the admin pages stay private.
+          If you are one of the two owners, a login cookie so the admin pages
+          stay private. An authenticator app is optional.
         </li>
       </ul>
 
