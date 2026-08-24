@@ -11,7 +11,12 @@ import {
 } from "@/lib/auth";
 
 const schema = z.object({
-  email: z.string().trim().email(),
+  email: z
+    .string()
+    .trim()
+    .min(3)
+    .max(200)
+    .refine((value) => value.includes("@") && !value.includes(" ")),
   password: z.string().min(1),
   totp: z.string().optional(),
 });
