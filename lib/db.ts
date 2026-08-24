@@ -18,6 +18,7 @@ import {
 const globalForDb = globalThis as unknown as {
   swanDb?: Database.Database;
   swanAdminFingerprint?: string;
+  swanSeeded?: boolean;
 };
 
 export type TenantType = "business" | "private";
@@ -409,10 +410,15 @@ export function getDb(): Database.Database {
     const db = new Database(dbPath);
     db.pragma("journal_mode = WAL");
     db.pragma("foreign_keys = ON");
-    migrate(db);
-    seedSampleTenants(db);
-    backfillTenantGarages(db);
     globalForDb.swanDb = db;
+  }
+  // Always migrate: HMR and long-lived Next processes reuse this connection,
+  // so new columns (BACS, etc.) must be applied even when the singleton already exists.
+  migrate(globalForDb.swanDb);
+  if (!globalForDb.swanSeeded) {
+    seedSampleTenants(globalForDb.swanDb);
+    backfillTenantGarages(globalForDb.swanDb);
+    globalForDb.swanSeeded = true;
   }
   syncAdmins(globalForDb.swanDb);
   return globalForDb.swanDb;
@@ -464,25 +470,21 @@ function storedOrEnv(stored: string | null | undefined, envValue: string): strin
 export function getResolvedLandlord(id: LandlordId): LandlordProfile {
   const config = getLandlordConfig(id);
   const row = getDb()
-    .prepare(
-      "SELECT address, account_name, sort_code, account_number FROM landlords WHERE id = ?",
-    )
-    .get(id) as
-    | {
-        address: string | null;
-        account_name: string | null;
-        sort_code: string | null;
-        account_number: string | null;
-      }
-    | undefined;
+    .prepare("SELECT * FROM landlords WHERE id = ?")
+    .get(id) as Record<string, unknown> | undefined;
   if (!row) return config;
   return {
     ...config,
-    address: storedOrEnv(row.address, config.address),
-    accountName: storedOrEnv(row.account_name, config.accountName),
-    sortCode: storedOrEnv(row.sort_code, config.sortCode),
-    accountNumber: storedOrEnv(row.account_number, config.accountNumber),
+    address: storedOrEnv(asStoredText(row.address), config.address),
+    accountName: storedOrEnv(asStoredText(row.account_name), config.accountName),
+    sortCode: storedOrEnv(asStoredText(row.sort_code), config.sortCode),
+    accountNumber: storedOrEnv(asStoredText(row.account_number), config.accountNumber),
   };
+}
+
+function asStoredText(value: unknown): string | null {
+  if (value == null) return null;
+  return String(value);
 }
 
 export function setLandlordDetails(
