@@ -21,7 +21,7 @@ import {
   updateTenant,
 } from "@/lib/queries";
 import { isLandlordId } from "@/lib/references";
-import { setAcceptingEnquiries, setFromEmail } from "@/lib/settings";
+import { setAcceptingEnquiries } from "@/lib/settings";
 
 export async function loginAction(formData: FormData) {
   const username = String(formData.get("username") ?? "");
@@ -74,9 +74,9 @@ export async function saveGaragesAction(formData: FormData) {
       bacs_account_number: String(
         formData.get(`${landlord.id}_bacs_account_number`) ?? "",
       ),
+      from_email: String(formData.get(`${landlord.id}_from_email`) ?? ""),
     });
   }
-  setFromEmail(String(formData.get("from_email") ?? ""));
   setAcceptingEnquiries(formData.get("accepting") === "on");
   revalidatePath("/", "layout");
   revalidatePath("/admin/garages");

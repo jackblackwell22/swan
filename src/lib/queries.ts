@@ -19,12 +19,14 @@ export function updateLandlord(
     bacs_account_name: string;
     bacs_sort_code: string;
     bacs_account_number: string;
+    from_email: string;
   },
 ) {
   getDb()
     .prepare(
       `UPDATE landlords
-       SET postal_address = ?, bacs_account_name = ?, bacs_sort_code = ?, bacs_account_number = ?
+       SET postal_address = ?, bacs_account_name = ?, bacs_sort_code = ?,
+           bacs_account_number = ?, from_email = ?
        WHERE id = ?`,
     )
     .run(
@@ -32,6 +34,7 @@ export function updateLandlord(
       fields.bacs_account_name.trim(),
       fields.bacs_sort_code.trim(),
       fields.bacs_account_number.trim(),
+      fields.from_email.trim(),
       id,
     );
 }
