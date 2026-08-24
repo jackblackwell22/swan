@@ -3,7 +3,6 @@ import fs from "node:fs";
 import {
   canEmailAsLandlord,
   getBusinessConfig,
-  getLandlordConfig,
   getSmtpConfig,
   isLandlordId,
   isSmtpConfigured,
@@ -11,8 +10,9 @@ import {
   landlordEnvPrefix,
   landlordHasBankDetails,
 } from "@/lib/config";
+import { getResolvedLandlord, type InvoiceWithTenant } from "@/lib/db";
 import { formatGBP, formatUKDate, periodLabel } from "@/lib/format";
-import type { InvoiceWithTenant } from "@/lib/db";
+import { addressLines } from "@/lib/landlords";
 
 export { isSmtpConfigured, isSmtpHostConfigured };
 
@@ -74,7 +74,7 @@ export async function sendInvoiceEmail(
       reason: "This invoice has no landlord, so it cannot be emailed from Jack or David.",
     };
   }
-  const landlord = getLandlordConfig(invoice.landlord_id);
+  const landlord = getResolvedLandlord(invoice.landlord_id);
   if (!isSmtpHostConfigured()) {
     return {
       sent: false as const,
@@ -101,6 +101,7 @@ export async function sendInvoiceEmail(
   const bankLines = landlordHasBankDetails(invoice.landlord_id)
     ? `Sort code: ${landlord.sortCode}\nAccount number: ${landlord.accountNumber}\n`
     : "";
+  const addressBlock = addressLines(landlord.address).join("\n");
 
   const lineText =
     invoice.lines.length > 0
@@ -122,7 +123,7 @@ Pay by bank transfer using this payment reference (please include it in full):
 ${invoice.payment_reference}
 ${bankLines}
 Kind regards,
-${landlord.name}
+${landlord.name}${addressBlock ? `\n${addressBlock}` : ""}
 Swan Street Lock-Ups`;
 
   const htmlLines =
@@ -142,7 +143,7 @@ ${htmlLines}
 <p>Amount due: <strong>${formatGBP(invoice.amount_pence)}</strong><br/>Due date: ${formatUKDate(invoice.due_date)}</p>
 <p>Pay by bank transfer using this payment reference:<br/><strong style="font-size:18px">${escapeHtml(invoice.payment_reference)}</strong></p>
 ${bankLines ? `<p>${escapeHtml(bankLines).replace(/\n/g, "<br/>")}</p>` : ""}
-<p>Kind regards,<br/>${escapeHtml(landlord.name)}<br/>Swan Street Lock-Ups</p>`;
+<p>Kind regards,<br/>${escapeHtml(landlord.name)}${addressBlock ? `<br/>${escapeHtml(addressBlock).replace(/\n/g, "<br/>")}` : ""}<br/>Swan Street Lock-Ups</p>`;
 
   const attachments = fs.existsSync(pdfPath)
     ? [{ filename: `${invoice.invoice_number}.pdf`, path: pdfPath }]

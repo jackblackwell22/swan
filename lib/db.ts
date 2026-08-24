@@ -4,11 +4,15 @@ import Database from "better-sqlite3";
 import bcrypt from "bcryptjs";
 import {
   GARAGE_NUMBERS,
+  LANDLORD_IDS,
   LANDLORD_NAMES,
   getAdminSeeds,
   getDatabasePath,
+  getLandlordConfig,
   isDevelopment,
   isLandlordId,
+  type LandlordId,
+  type LandlordProfile,
 } from "@/lib/config";
 
 const globalForDb = globalThis as unknown as {
@@ -230,6 +234,11 @@ function migrate(db: Database.Database) {
       PRIMARY KEY (tenant_id, garage_number)
     );
 
+    CREATE TABLE IF NOT EXISTS landlords (
+      id TEXT PRIMARY KEY,
+      address TEXT
+    );
+
     CREATE INDEX IF NOT EXISTS idx_invoices_tenant ON invoices(tenant_id);
     CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
     CREATE INDEX IF NOT EXISTS idx_invoices_period ON invoices(period_start);
@@ -243,6 +252,7 @@ function migrate(db: Database.Database) {
     WHERE landlord_id != '';
   `);
   seedGarages(db);
+  seedLandlords(db);
 }
 
 function addColumnIfMissing(
@@ -263,6 +273,13 @@ function seedGarages(db: Database.Database) {
   );
   for (const number of GARAGE_NUMBERS) {
     insert.run(number);
+  }
+}
+
+function seedLandlords(db: Database.Database) {
+  const insert = db.prepare("INSERT OR IGNORE INTO landlords (id, address) VALUES (?, NULL)");
+  for (const id of LANDLORD_IDS) {
+    insert.run(id);
   }
 }
 
@@ -434,6 +451,26 @@ export function setGarageLandlord(number: number, landlordId: string | null) {
   getDb()
     .prepare("UPDATE garages SET landlord_id = ? WHERE number = ?")
     .run(landlordId, number);
+}
+
+export function getResolvedLandlord(id: LandlordId): LandlordProfile {
+  const config = getLandlordConfig(id);
+  const row = getDb()
+    .prepare("SELECT address FROM landlords WHERE id = ?")
+    .get(id) as { address: string | null } | undefined;
+  if (!row || row.address == null) {
+    return config;
+  }
+  return { ...config, address: row.address.trim() };
+}
+
+export function setLandlordAddress(id: LandlordId, address: string) {
+  getDb()
+    .prepare(
+      `INSERT INTO landlords (id, address) VALUES (?, ?)
+       ON CONFLICT(id) DO UPDATE SET address = excluded.address`,
+    )
+    .run(id, address.trim());
 }
 
 export function getTenantGarages(tenantId: number): TenantGarage[] {

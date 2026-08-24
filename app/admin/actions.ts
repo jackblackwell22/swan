@@ -13,6 +13,7 @@ import {
   markInvoicePaid,
   markInvoiceSent,
   setGarageLandlord,
+  setLandlordAddress,
   updateStatementMatch,
   updateTenant,
 } from "@/lib/db";
@@ -115,6 +116,13 @@ export async function saveGarageLandlords(formData: FormData) {
     const landlordId = raw === "jack" || raw === "david" ? raw : null;
     setGarageLandlord(number, landlordId);
   }
+  revalidateAdmin();
+}
+
+export async function saveLandlordAddresses(formData: FormData) {
+  await requireAdmin();
+  setLandlordAddress("jack", String(formData.get("address_jack") || ""));
+  setLandlordAddress("david", String(formData.get("address_david") || ""));
   revalidateAdmin();
 }
 

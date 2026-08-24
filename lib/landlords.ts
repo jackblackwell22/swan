@@ -17,3 +17,11 @@ export const LANDLORD_CODES: Record<LandlordId, "J" | "D"> = {
 export function isLandlordId(value: string | null | undefined): value is LandlordId {
   return value === "jack" || value === "david";
 }
+
+export function addressLines(raw: string | null | undefined): string[] {
+  return (raw ?? "")
+    .replaceAll("\\n", "\n")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}

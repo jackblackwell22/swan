@@ -1,10 +1,13 @@
 import { GarageLandlordForm } from "@/components/admin/garage-landlord-form";
-import { listGarages } from "@/lib/db";
+import { LandlordAddressForm } from "@/components/admin/landlord-address-form";
+import { getResolvedLandlord, listGarages } from "@/lib/db";
+import { LANDLORD_IDS } from "@/lib/landlords";
 
 export const dynamic = "force-dynamic";
 
 export default function GaragesAdminPage() {
   const garages = listGarages();
+  const landlords = LANDLORD_IDS.map(getResolvedLandlord);
 
   return (
     <div className="space-y-6">
@@ -17,6 +20,7 @@ export default function GaragesAdminPage() {
         </p>
       </div>
       <GarageLandlordForm garages={garages} />
+      <LandlordAddressForm landlords={landlords} />
       <section className="max-w-2xl space-y-2 rounded-xl bg-white p-5 text-sm ring-1 ring-border">
         <h2 className="text-lg text-ink">Payment references</h2>
         <p className="text-muted-foreground">

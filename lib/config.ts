@@ -29,9 +29,23 @@ export type LandlordProfile = {
   name: string;
   code: "J" | "D";
   fromEmail: string;
+  address: string;
   sortCode: string;
   accountNumber: string;
 };
+
+function envAddress(prefix: "JACK" | "DAVID"): string {
+  const block = trim(process.env[`${prefix}_ADDRESS`]).replaceAll("\\n", "\n");
+  if (block) return block;
+  return [
+    trim(process.env[`${prefix}_ADDRESS_LINE1`]),
+    trim(process.env[`${prefix}_ADDRESS_LINE2`]),
+    trim(process.env[`${prefix}_ADDRESS_TOWN`]),
+    trim(process.env[`${prefix}_ADDRESS_POSTCODE`]),
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
 
 export function getLandlordConfig(id: LandlordId): LandlordProfile {
   const prefix = id === "jack" ? "JACK" : "DAVID";
@@ -40,6 +54,7 @@ export function getLandlordConfig(id: LandlordId): LandlordProfile {
     name: LANDLORD_NAMES[id],
     code: LANDLORD_CODES[id],
     fromEmail: trim(process.env[`${prefix}_FROM_EMAIL`]),
+    address: envAddress(prefix),
     sortCode: trim(
       process.env[`${prefix}_BANK_SORT_CODE`] || process.env[`${prefix}_SORT_CODE`],
     ),

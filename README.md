@@ -68,7 +68,8 @@ Anything left blank is **hidden**. That is deliberate.
 | Setting | What it is |
 | --- | --- |
 | `BUSINESS_NAME` | Usually “Swan Street Lock-Ups” |
-| `BUSINESS_ADDRESS` | Correspondence address for invoices. Leave blank if you do not want it printed yet. |
+| `BUSINESS_ADDRESS` | Correspondence on the public site only, if you want it shown. Not used as a landlord invoice address. |
+| `JACK_ADDRESS` / `DAVID_ADDRESS` | Postal address on that landlord’s invoices (one line per line, or `\n`). Leave blank until real. You can also set this on the Garages page. |
 | `BUSINESS_EMAIL` | Your real mailbox, once you have one |
 | `BUSINESS_PHONE` | Your real telephone, or blank |
 | `VAT_REGISTERED` | `true` only if you are VAT registered |
@@ -92,7 +93,7 @@ There is no company number, VAT number or bank account invented for you. Add tho
 
 Sign in at `/admin`.
 
-1. **Garages** — the six lock-ups are numbered **7, 8, 9, 10, 11, 12**. For each one, choose Jack Blackwell or David Blackwell. Leave it unset until you know; the desk will not guess.
+1. **Garages** — the six lock-ups are numbered **7, 8, 9, 10, 11, 12**. For each one, choose Jack Blackwell or David Blackwell. Leave it unset until you know; the desk will not guess. Each landlord also has a postal address field here; it prints on their invoices under their name, and stays hidden if blank.
 2. **Tenants** — name, email, which of 7–12 they rent (one or more), rent **per garage**, business or private, active or ended. A garage can only be let to one active tenant at a time.
 3. **This month** — “Create this month’s invoices” makes PDFs for every **active** tenant. One invoice per tenant per landlord per month: two of Jack’s units is one Jack invoice with two line items; one of Jack’s and one of David’s is two invoices. You can also invoice one tenant from their page.
 4. **Invoices** — download the PDF, email it (if that landlord’s from-email and SMTP are filled in), resend, or mark paid. If a landlord’s email is not set, the PDF still generates and the desk says email is not set up for them.

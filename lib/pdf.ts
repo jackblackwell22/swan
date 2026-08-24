@@ -3,12 +3,12 @@ import path from "node:path";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import {
   getBusinessConfig,
-  getLandlordConfig,
   isLandlordId,
   type LandlordProfile,
 } from "@/lib/config";
+import { getResolvedLandlord, type InvoiceWithTenant } from "@/lib/db";
 import { formatGBP, formatUKDate, periodLabel } from "@/lib/format";
-import type { InvoiceWithTenant } from "@/lib/db";
+import { addressLines } from "@/lib/landlords";
 
 const blue = rgb(0.118, 0.42, 0.71);
 const brick = rgb(0.702, 0.353, 0.227);
@@ -16,6 +16,14 @@ const ink = rgb(0.12, 0.11, 0.09);
 const muted = rgb(0.42, 0.39, 0.35);
 const line = rgb(0.82, 0.78, 0.72);
 const cream = rgb(0.953, 0.933, 0.894);
+
+function pdfSafe(text: string): string {
+  return text
+    .replaceAll("’", "'")
+    .replaceAll("‘", "'")
+    .replaceAll("–", "-")
+    .replaceAll("—", "-");
+}
 
 function invoicePdfPath(invoiceNumber: string): string {
   const safe = invoiceNumber.replace(/[^A-Za-z0-9._-]/g, "_");
@@ -33,10 +41,11 @@ function garagePhrase(invoice: InvoiceWithTenant): string {
 export async function writeInvoicePdf(invoice: InvoiceWithTenant): Promise<string> {
   const config = getBusinessConfig();
   const landlord: LandlordProfile | null = isLandlordId(invoice.landlord_id)
-    ? getLandlordConfig(invoice.landlord_id)
+    ? getResolvedLandlord(invoice.landlord_id)
     : null;
   const fromName = landlord?.name || invoice.landlord_name || config.name;
   const fromEmail = landlord?.fromEmail || "";
+  const fromAddress = landlord ? addressLines(landlord.address) : [];
   const sortCode = landlord?.sortCode || "";
   const accountNumber = landlord?.accountNumber || "";
 
@@ -65,12 +74,10 @@ export async function writeInvoicePdf(invoice: InvoiceWithTenant): Promise<strin
   let y = 760;
   page.drawText("From", { x: 48, y, size: 9, font: sansBold, color: brick });
   y -= 16;
-  page.drawText(fromName, { x: 48, y, size: 11, font: serifBold, color: ink });
-  if (config.address) {
-    for (const part of config.address.split(",").map((s) => s.trim()).filter(Boolean)) {
-      y -= 14;
-      page.drawText(part, { x: 48, y, size: 10, font: sans, color: ink });
-    }
+  page.drawText(pdfSafe(fromName), { x: 48, y, size: 11, font: serifBold, color: ink });
+  for (const part of fromAddress) {
+    y -= 14;
+    page.drawText(pdfSafe(part), { x: 48, y, size: 10, font: sans, color: ink });
   }
   if (fromEmail) {
     y -= 14;

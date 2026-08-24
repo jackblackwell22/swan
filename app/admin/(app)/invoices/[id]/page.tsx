@@ -1,13 +1,13 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { getInvoice } from "@/lib/db";
+import { getInvoice, getResolvedLandlord } from "@/lib/db";
 import { formatGBP, formatUKDate, periodLabel } from "@/lib/format";
 import { InvoiceActions } from "@/components/admin/invoice-actions";
+import { addressLines } from "@/lib/landlords";
 import {
   canEmailAsLandlord,
   getBusinessConfig,
-  getLandlordConfig,
   isLandlordId,
   isSmtpHostConfigured,
   landlordEnvPrefix,
@@ -26,9 +26,10 @@ export default async function InvoiceDetailPage({
   if (!invoice) notFound();
   const config = getBusinessConfig();
   const landlord = isLandlordId(invoice.landlord_id)
-    ? getLandlordConfig(invoice.landlord_id)
+    ? getResolvedLandlord(invoice.landlord_id)
     : null;
   const fromName = landlord?.name || invoice.landlord_name || config.name;
+  const fromAddress = landlord ? addressLines(landlord.address) : [];
   const canEmail = landlord ? canEmailAsLandlord(landlord.id) : false;
   const hasBank = landlord ? landlordHasBankDetails(landlord.id) : false;
   const garageLabel =
@@ -74,12 +75,12 @@ export default async function InvoiceDetailPage({
           <dt className="text-muted-foreground">From</dt>
           <dd className="mt-1">
             {fromName}
-            {config.address ? (
-              <>
+            {fromAddress.map((line) => (
+              <span key={line}>
                 <br />
-                {config.address}
-              </>
-            ) : null}
+                {line}
+              </span>
+            ))}
             {landlord?.fromEmail ? (
               <>
                 <br />
