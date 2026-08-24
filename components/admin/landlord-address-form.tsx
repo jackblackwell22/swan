@@ -32,7 +32,7 @@ export function LandlordAddressForm({ landlords }: { landlords: LandlordProfile[
                 name={`address_${id}`}
                 rows={4}
                 defaultValue={landlord?.address ?? ""}
-                placeholder={"Line 1\nTown\nPostcode"}
+                placeholder="Leave blank until the real address is known"
                 className="min-h-28 bg-cream/40 font-normal"
               />
               {lines.length === 0 ? (
