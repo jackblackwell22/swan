@@ -39,7 +39,7 @@ Then open `.env.local` in a text editor.
 | `DAVID_USERNAME` / `DAVID_PASSWORD` | David’s login |
 | `SESSION_SECRET` | A long random string (any 32+ characters) so the site can keep you signed in |
 | `CRON_SECRET` | A different long random string. Needed for the monthly invoice web address |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | Optional. Your mailbox’s outgoing mail settings, if you want invoices emailed. Leave blank to still make PDFs without sending mail. |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS` | Optional. Your mailbox’s outgoing mail connection, if you want invoices emailed. Leave blank to still make PDFs without sending mail. Each landlord’s From address is typed on the Garages page, not here. |
 | `DATABASE_PATH` | Optional. Full path to the database file. If blank, the site uses `data/swan.sqlite` |
 
 Pick your own usernames and strong passwords. Do not reuse a banking password.
@@ -71,7 +71,7 @@ npm run build
 ## First jobs in the owners’ desk
 
 1. **Garages** — for each of units 7–12, choose Jack, David, or Not set. Do not guess; leave “Not set” until you know.
-2. On the same page, fill **postal address** and **BACS** details for each landlord if you want them on invoices. Empty boxes stay empty on the PDF. There is also a **from-email** box for outgoing invoices, and **Accepting enquiries**.
+2. On the same page, fill **postal address**, **BACS**, and **from-email** for each landlord if you want them used. Empty boxes stay empty on the PDF, and invoices are not emailed for a landlord until that landlord has a from-email. **Accepting enquiries** is on the same page.
 3. **Tenants** — add a person, tick the lock-ups they rent, and type the monthly rent for each. One lock-up cannot be let to two people at once.
 4. **This month** — when you are ready, **Create this month’s invoices**. You also get a PDF download later under **Invoices**. If outgoing email is not set, the page will say so; PDFs are still made.
 

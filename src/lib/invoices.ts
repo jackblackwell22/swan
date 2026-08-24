@@ -1,7 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { getDb, type InvoiceRow, type LandlordRow, type TenantRow } from "./db";
-import { isSmtpConfigured, sendInvoiceEmail } from "./email";
+import {
+  isSmtpConfigured,
+  MISSING_LANDLORD_FROM_EMAIL,
+  sendInvoiceEmail,
+} from "./email";
 import { isoNow, londonParts, monthLabel } from "./london";
 import { writeInvoicePdf, invoicePdfAbsolutePath } from "./pdf";
 import { paymentReference } from "./references";
@@ -224,6 +228,20 @@ export async function emailInvoice(invoiceId: number) {
     return { sent: false, error: "Email is not configured." };
   }
 
+  const landlord = db
+    .prepare(`SELECT * FROM landlords WHERE id = ?`)
+    .get(invoice.landlord_id) as LandlordRow | undefined;
+  if (!landlord) return { sent: false, error: "Landlord not found." };
+
+  const from = landlord.from_email.trim();
+  if (!from) {
+    db.prepare(`UPDATE invoices SET email_error = ? WHERE id = ?`).run(
+      MISSING_LANDLORD_FROM_EMAIL,
+      invoiceId,
+    );
+    return { sent: false, error: MISSING_LANDLORD_FROM_EMAIL };
+  }
+
   const abs = invoicePdfAbsolutePath(invoice.pdf_relpath);
   if (!fs.existsSync(abs)) {
     return { sent: false, error: "The PDF file is missing on this computer." };
@@ -236,6 +254,7 @@ export async function emailInvoice(invoiceId: number) {
   try {
     const result = await sendInvoiceEmail({
       to: tenant.email.trim(),
+      from,
       subject: `${period} invoice — Swan Street Lock-Ups`,
       text: [
         `Hello ${tenant.name},`,

@@ -38,7 +38,8 @@ function migrate(db: Database.Database) {
       postal_address TEXT NOT NULL DEFAULT '',
       bacs_account_name TEXT NOT NULL DEFAULT '',
       bacs_sort_code TEXT NOT NULL DEFAULT '',
-      bacs_account_number TEXT NOT NULL DEFAULT ''
+      bacs_account_number TEXT NOT NULL DEFAULT '',
+      from_email TEXT NOT NULL DEFAULT ''
     );
 
     CREATE TABLE IF NOT EXISTS garages (
@@ -116,9 +117,15 @@ function migrate(db: Database.Database) {
   db.prepare(
     `INSERT OR IGNORE INTO settings (key, value) VALUES ('accepting_enquiries', '1')`,
   ).run();
-  db.prepare(
-    `INSERT OR IGNORE INTO settings (key, value) VALUES ('from_email', '')`,
-  ).run();
+
+  const landlordColumns = (
+    db.prepare(`PRAGMA table_info(landlords)`).all() as { name: string }[]
+  ).map((column) => column.name);
+  if (!landlordColumns.includes("from_email")) {
+    db.exec(
+      `ALTER TABLE landlords ADD COLUMN from_email TEXT NOT NULL DEFAULT ''`,
+    );
+  }
 }
 
 export function getDb() {
@@ -142,6 +149,7 @@ export type LandlordRow = {
   bacs_account_name: string;
   bacs_sort_code: string;
   bacs_account_number: string;
+  from_email: string;
 };
 
 export type GarageRow = {

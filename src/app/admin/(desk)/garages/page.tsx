@@ -1,7 +1,7 @@
 import { requireOwner } from "@/lib/auth";
 import { GARAGE_UNITS } from "@/lib/constants";
 import { listGarages, listLandlords } from "@/lib/queries";
-import { getFromEmail, isAcceptingEnquiries } from "@/lib/settings";
+import { isAcceptingEnquiries } from "@/lib/settings";
 import { saveGaragesAction } from "../../actions";
 
 export const metadata = { title: "Garages" };
@@ -16,15 +16,14 @@ export default async function AdminGaragesPage({
   const garages = listGarages();
   const landlords = listLandlords();
   const accepting = isAcceptingEnquiries();
-  const fromEmail = getFromEmail();
 
   return (
     <div>
       <h1 className="font-display text-4xl">Garages</h1>
       <p className="mt-2 max-w-2xl text-muted">
         Choose who owns each of units {GARAGE_UNITS.join(", ")}. Leave a unit as
-        “Not set” until you know. Address and bank details are printed on that
-        landlord’s invoices only if you fill them in — nothing is invented.
+        “Not set” until you know. Address, bank details and from-email belong to
+        that landlord only — nothing is invented.
       </p>
       {params.saved === "1" ? (
         <p className="mt-4 rounded-md border border-line bg-paper px-4 py-3 text-sm">
@@ -106,25 +105,26 @@ export default async function AdminGaragesPage({
                   className="mt-1 w-full rounded-md border border-line bg-cream px-3 py-2"
                 />
               </label>
+              <label className="block text-sm">
+                <span className="font-semibold">From-email</span>
+                <input
+                  name={`${landlord.id}_from_email`}
+                  type="email"
+                  defaultValue={landlord.from_email}
+                  autoComplete="off"
+                  className="mt-1 w-full rounded-md border border-line bg-cream px-3 py-2"
+                />
+                <span className="mt-1 block text-muted">
+                  Used as the From address on this landlord’s invoices when SMTP
+                  is set in the environment. Leave blank until you have one.
+                </span>
+              </label>
             </section>
           ))}
         </div>
 
         <section className="space-y-3 rounded-lg border border-line bg-paper p-5">
           <h2 className="font-display text-2xl">Sending invoices</h2>
-          <label className="block text-sm">
-            <span className="font-semibold">From-email</span>
-            <input
-              name="from_email"
-              type="email"
-              defaultValue={fromEmail}
-              className="mt-1 w-full max-w-md rounded-md border border-line bg-cream px-3 py-2"
-            />
-            <span className="mt-1 block text-muted">
-              Used as the From address when SMTP is set in the environment. Leave
-              blank if you do not send email yet.
-            </span>
-          </label>
           <label className="flex items-center gap-3 text-sm font-semibold">
             <input
               type="checkbox"

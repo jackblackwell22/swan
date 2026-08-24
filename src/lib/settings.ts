@@ -24,11 +24,3 @@ export function isAcceptingEnquiries() {
 export function setAcceptingEnquiries(on: boolean) {
   setSetting("accepting_enquiries", on ? "1" : "0");
 }
-
-export function getFromEmail() {
-  return getSetting("from_email").trim();
-}
-
-export function setFromEmail(email: string) {
-  setSetting("from_email", email.trim());
-}

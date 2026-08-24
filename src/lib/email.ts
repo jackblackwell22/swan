@@ -1,17 +1,10 @@
 import nodemailer from "nodemailer";
-import { getFromEmail } from "./settings";
+
+export const MISSING_LANDLORD_FROM_EMAIL =
+  "Add a from-email for this landlord on the Garages page";
 
 export function isSmtpConfigured() {
   return Boolean(process.env.SMTP_HOST?.trim());
-}
-
-export function outgoingFromAddress() {
-  return (
-    getFromEmail() ||
-    process.env.SMTP_FROM?.trim() ||
-    process.env.SMTP_USER?.trim() ||
-    ""
-  );
 }
 
 function transport() {
@@ -34,6 +27,7 @@ function transport() {
 
 export async function sendInvoiceEmail(opts: {
   to: string;
+  from: string;
   subject: string;
   text: string;
   filename: string;
@@ -42,11 +36,11 @@ export async function sendInvoiceEmail(opts: {
   if (!isSmtpConfigured()) {
     return { sent: false as const, error: "Email is not configured." };
   }
-  const from = outgoingFromAddress();
+  const from = opts.from.trim();
   if (!from) {
     return {
       sent: false as const,
-      error: "No from-email is set. Add one on the Garages page.",
+      error: MISSING_LANDLORD_FROM_EMAIL,
     };
   }
   const mailer = transport();
